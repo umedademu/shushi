@@ -28,6 +28,10 @@ dist/
 build/
 .next/
 coverage/
+*.tsbuildinfo
+
+# Vercel
+.vercel/
 
 # Environment and secrets
 .env

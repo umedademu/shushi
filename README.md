@@ -1,7 +1,13 @@
 # shushi
 
-Initial repository for the shushi project.
+パチンコ・パチスロの収支を管理するWebアプリです。
 
-## Notes
+## App
 
-This repository was initialized from `C:\Users\USER\Desktop\shushi`.
+アプリ本体は `app/` にあります。
+
+```bash
+cd app
+npm install
+npm run dev
+```
