@@ -112,6 +112,11 @@ const updateItems = [
     title: "貯玉投資と貯玉回収を追加",
     body: "収支入力で現金とは別に、貯玉の投資数と回収数を保存できるようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "貯玉残高の自動更新を追加",
+    body: "稼働記録を保存すると、選択したレートの現在貯玉が投資と回収に合わせて増減するようにしました。",
+  },
 ];
 
 function pad(value: number) {
@@ -499,6 +504,8 @@ export function App() {
     [form.rateId, selectedStoreRates],
   );
   const canSave = Boolean(form.storeName && form.machineName && selectedRate);
+  const formSavedDifference = toNumber(form.savedRecovery) - toNumber(form.savedInvestment);
+  const selectedRateSavedAfter = selectedRate ? selectedRate.savedCount + formSavedDifference : null;
 
   function moveMonth(amount: number) {
     setCurrentMonth(
@@ -591,6 +598,33 @@ export function App() {
     if (form.rateId === rateId) {
       setForm((current) => ({ ...current, rateId: "", rateName: "" }));
     }
+  }
+
+  function updateRateSavedCount(rateId: string | undefined, amount: number) {
+    if (!rateId || amount === 0) {
+      return;
+    }
+
+    setRateOptions((current) => {
+      let changed = false;
+      const nextOptions = current.map((rate) => {
+        if (rate.id !== rateId) {
+          return rate;
+        }
+
+        changed = true;
+        return {
+          ...rate,
+          savedCount: rate.savedCount + amount,
+        };
+      });
+
+      if (changed) {
+        saveRateOptions(nextOptions);
+      }
+
+      return changed ? nextOptions : current;
+    });
   }
 
   function handleRateSubmit(event: FormEvent<HTMLFormElement>) {
@@ -698,6 +732,7 @@ export function App() {
     const nextRecords = [...records, newRecord];
     setRecords(nextRecords);
     saveRecords(nextRecords);
+    updateRateSavedCount(selectedRate.id, savedProfit(newRecord));
     setSelectedDate(newRecord.date);
     const [year, month] = newRecord.date.split("-").map(Number);
     setCurrentMonth(new Date(year, month - 1, 1));
@@ -705,9 +740,14 @@ export function App() {
   }
 
   function deleteRecord(recordId: string) {
+    const deletedRecord = records.find((record) => record.id === recordId);
     const nextRecords = records.filter((record) => record.id !== recordId);
     setRecords(nextRecords);
     saveRecords(nextRecords);
+
+    if (deletedRecord) {
+      updateRateSavedCount(deletedRecord.rateId, -savedProfit(deletedRecord));
+    }
   }
 
   if (viewMode === "updates") {
@@ -1083,10 +1123,16 @@ export function App() {
                 </div>
                 <div>
                   <span>貯玉差引</span>
-                  <strong className={classForAmount(toNumber(form.savedRecovery) - toNumber(form.savedInvestment))}>
-                    {savedCount(toNumber(form.savedRecovery) - toNumber(form.savedInvestment))}
+                  <strong className={classForAmount(formSavedDifference)}>
+                    {savedCount(formSavedDifference)}
                   </strong>
                 </div>
+                {selectedRateSavedAfter !== null && (
+                  <div>
+                    <span>保存後の貯玉</span>
+                    <strong>{plainSavedCount(selectedRateSavedAfter)}</strong>
+                  </div>
+                )}
               </div>
 
               <button className="save-button" type="submit" disabled={!canSave}>

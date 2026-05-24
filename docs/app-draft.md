@@ -25,6 +25,8 @@ Implemented draft behavior:
 - Save the current saved ball count for each store-specific rate.
 - Show exchange rate and saved balls in the play entry rate field.
 - Save cash investment and cash recovery separately from saved-ball investment and saved-ball recovery.
+- Automatically update the selected rate's saved-ball count when a play record is saved.
+- Restore that saved-ball count adjustment when a play record is deleted.
 
 ## Saved Fields
 
@@ -66,7 +68,11 @@ Each rate choice stores:
 
 When a play record is saved, the selected rate settings are copied into that record so past records do not change if the store rate is edited later.
 
-Saved balls are currently manual values. Automatic increases and decreases should be designed later after deciding how to handle cash investment, saved-ball use, payout, and exchange.
+Saved balls are updated automatically from each play record:
+
+- Saved-ball investment decreases the selected rate's current saved-ball count.
+- Saved-ball recovery increases the selected rate's current saved-ball count.
+- Deleting a play record reverses the same saved-ball change.
 
 ## Notes
 

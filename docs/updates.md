@@ -18,3 +18,5 @@
 - Added manual saved-ball counts to each rate choice.
 - Improved the play entry rate display so exchange rate and saved balls are visible before saving.
 - Added saved-ball investment and saved-ball recovery fields to the play entry form.
+- Added automatic saved-ball balance updates when saving or deleting play records.
+- Added a saved-ball balance preview to the play entry form.
