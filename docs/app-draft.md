@@ -46,6 +46,7 @@ Implemented draft behavior:
 - Show selected-day details in the order: summary, play record cards, then profit chart.
 - Show positive profit and positive saved-ball changes in blue, while keeping selected calendar day values readable.
 - Move the monthly chart to the previous or next month with buttons that stay linked to the main calendar month.
+- Bulk edit past records for one store by assigning all pachinko records or all slot records to selected store rates.
 
 ## Saved Fields
 
@@ -107,6 +108,7 @@ Saved balls are updated automatically from each play record:
 - Saved-ball recovery increases the selected rate's current saved-ball count.
 - Deleting a play record reverses the same saved-ball change.
 - Editing a play record reverses the old saved-ball change and applies the new one.
+- Bulk editing past records reverses the old rate's saved-ball change and applies it to the newly selected rate.
 
 ## Notes
 

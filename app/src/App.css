@@ -735,7 +735,7 @@ h3 {
 
 .csv-buttons {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -884,6 +884,7 @@ h3 {
 }
 
 .record-form input,
+.record-form select,
 .record-form textarea {
   width: 100%;
   border: 1px solid #d4dfdb;
@@ -892,6 +893,10 @@ h3 {
   color: #15231f;
   font-size: 16px;
   padding: 12px;
+}
+
+.record-form select {
+  min-height: 46px;
 }
 
 .record-form textarea {
@@ -1249,6 +1254,62 @@ h3 {
   color: #40504c;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.bulk-editor-backdrop {
+  z-index: 15;
+}
+
+.bulk-editor-sheet {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.bulk-editor-sheet .record-form {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.bulk-rate-card,
+.bulk-preview {
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.bulk-rate-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bulk-rate-head span,
+.bulk-preview span {
+  color: #65736f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bulk-rate-head strong,
+.bulk-preview strong {
+  color: #14231f;
+  font-size: 15px;
+}
+
+.bulk-rate-card p,
+.bulk-preview p,
+.bulk-message {
+  color: #40504c;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.bulk-message {
+  margin: 0;
 }
 
 .updates-list {

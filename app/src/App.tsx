@@ -63,6 +63,17 @@ type RecordForm = {
   note: string;
 };
 
+type RateSnapshot = Pick<
+  PlayRecord,
+  | "rateId"
+  | "rateName"
+  | "rateKind"
+  | "rateUnitPrice"
+  | "rateExchangeCountPer100Yen"
+  | "rateSavedCount"
+  | "rateReplayFeePercent"
+>;
+
 type ViewMode = "home" | "updates";
 type OptionField = "storeName" | "machineName";
 type ChartMode = "month" | "year" | "life" | "store" | "machine";
@@ -210,6 +221,11 @@ const updateItems = [
     date: "2026-05-24",
     title: "月別グラフの月移動を追加",
     body: "月別グラフにも前月・次月ボタンを追加し、メインカレンダーの月表示と連動するようにしました。",
+  },
+  {
+    date: "2026-05-24",
+    title: "過去記録の一括編集を追加",
+    body: "指定した店舗の過去記録に対して、パチンコとスロットのレートをまとめて付け替えられるようにしました。",
   },
 ];
 
@@ -685,6 +701,18 @@ function rateSummary(
   )} / ${rateSavedText(rate)} / 再プレイ${rate.replayFeePercent.toLocaleString("ja-JP")}%`;
 }
 
+function createRateSnapshot(rate: RateOption, savedCount = rate.savedCount): RateSnapshot {
+  return {
+    rateId: rate.id,
+    rateName: rate.name,
+    rateKind: rate.kind,
+    rateUnitPrice: rate.unitPrice,
+    rateExchangeCountPer100Yen: rate.exchangeCountPer100Yen,
+    rateSavedCount: savedCount,
+    rateReplayFeePercent: rate.replayFeePercent,
+  };
+}
+
 const csvHeaders = [
   "日付",
   "開始時刻",
@@ -1014,6 +1042,11 @@ export function App() {
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [rateForm, setRateForm] = useState<RateForm>(() => createRateForm());
   const [csvMessage, setCsvMessage] = useState("");
+  const [isBulkEditorOpen, setIsBulkEditorOpen] = useState(false);
+  const [bulkStoreName, setBulkStoreName] = useState("");
+  const [bulkPachinkoRateId, setBulkPachinkoRateId] = useState("");
+  const [bulkSlotRateId, setBulkSlotRateId] = useState("");
+  const [bulkMessage, setBulkMessage] = useState("");
 
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
 
@@ -1240,6 +1273,57 @@ export function App() {
     () => selectedStoreRates.find((rate) => rate.id === form.rateId) ?? null,
     [form.rateId, selectedStoreRates],
   );
+  const bulkStoreOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...records.map((record) => record.storeName),
+            ...rateOptions.map((rate) => rate.storeName),
+          ]
+            .map((storeName) => storeName.trim())
+            .filter(Boolean),
+        ),
+      ).sort((left, right) => left.localeCompare(right, "ja")),
+    [rateOptions, records],
+  );
+  const bulkStoreRates = useMemo(
+    () => rateOptions.filter((rate) => rate.storeName === bulkStoreName),
+    [bulkStoreName, rateOptions],
+  );
+  const bulkPachinkoRates = useMemo(
+    () => bulkStoreRates.filter((rate) => rate.kind === "pachinko"),
+    [bulkStoreRates],
+  );
+  const bulkSlotRates = useMemo(
+    () => bulkStoreRates.filter((rate) => rate.kind === "slot"),
+    [bulkStoreRates],
+  );
+  const bulkPachinkoTargetCount = useMemo(
+    () =>
+      records.filter(
+        (record) => record.storeName === bulkStoreName && record.rateKind === "pachinko",
+      ).length,
+    [bulkStoreName, records],
+  );
+  const bulkSlotTargetCount = useMemo(
+    () =>
+      records.filter(
+        (record) => record.storeName === bulkStoreName && record.rateKind === "slot",
+      ).length,
+    [bulkStoreName, records],
+  );
+  const bulkPachinkoRate = useMemo(
+    () => bulkPachinkoRates.find((rate) => rate.id === bulkPachinkoRateId) ?? null,
+    [bulkPachinkoRateId, bulkPachinkoRates],
+  );
+  const bulkSlotRate = useMemo(
+    () => bulkSlotRates.find((rate) => rate.id === bulkSlotRateId) ?? null,
+    [bulkSlotRateId, bulkSlotRates],
+  );
+  const bulkEditableCount =
+    (bulkPachinkoRate ? bulkPachinkoTargetCount : 0) + (bulkSlotRate ? bulkSlotTargetCount : 0);
+  const canBulkApply = Boolean(bulkStoreName && bulkEditableCount > 0);
   const editingRecord = useMemo(
     () => records.find((record) => record.id === editingRecordId) ?? null,
     [editingRecordId, records],
@@ -1421,6 +1505,34 @@ export function App() {
     setEditingRateId(null);
   }
 
+  function openBulkEditor() {
+    const selectedStore = selectedRecords[0]?.storeName;
+    const nextStore =
+      bulkStoreName && bulkStoreOptions.includes(bulkStoreName)
+        ? bulkStoreName
+        : selectedStore && bulkStoreOptions.includes(selectedStore)
+          ? selectedStore
+          : bulkStoreOptions[0] ?? "";
+
+    setBulkStoreName(nextStore);
+    setBulkPachinkoRateId("");
+    setBulkSlotRateId("");
+    setBulkMessage("");
+    setIsBulkEditorOpen(true);
+  }
+
+  function closeBulkEditor() {
+    setIsBulkEditorOpen(false);
+    setBulkMessage("");
+  }
+
+  function updateBulkStore(value: string) {
+    setBulkStoreName(value);
+    setBulkPachinkoRateId("");
+    setBulkSlotRateId("");
+    setBulkMessage("");
+  }
+
   function openRateEditor(kind: RateKind) {
     setRateForm(createRateForm(kind));
     setEditingRateId(null);
@@ -1452,15 +1564,18 @@ export function App() {
     }
   }
 
-  function updateRateSavedCount(rateId: string | undefined, amount: number) {
-    if (!rateId || amount === 0) {
+  function updateRateSavedCounts(adjustments: Map<string, number>) {
+    const activeAdjustments = Array.from(adjustments.entries()).filter(([, amount]) => amount !== 0);
+    if (activeAdjustments.length === 0) {
       return;
     }
 
+    const adjustmentMap = new Map(activeAdjustments);
     setRateOptions((current) => {
       let changed = false;
       const nextOptions = current.map((rate) => {
-        if (rate.id !== rateId) {
+        const amount = adjustmentMap.get(rate.id) ?? 0;
+        if (amount === 0) {
           return rate;
         }
 
@@ -1477,6 +1592,14 @@ export function App() {
 
       return changed ? nextOptions : current;
     });
+  }
+
+  function updateRateSavedCount(rateId: string | undefined, amount: number) {
+    if (!rateId || amount === 0) {
+      return;
+    }
+
+    updateRateSavedCounts(new Map([[rateId, amount]]));
   }
 
   function handleRateSubmit(event: FormEvent<HTMLFormElement>) {
@@ -1560,15 +1683,7 @@ export function App() {
     }
 
     const rateSnapshot = selectedRate
-      ? {
-          rateId: selectedRate.id,
-          rateName: selectedRate.name,
-          rateKind: selectedRate.kind,
-          rateUnitPrice: selectedRate.unitPrice,
-          rateExchangeCountPer100Yen: selectedRate.exchangeCountPer100Yen,
-          rateSavedCount: selectedRateSavedBefore ?? selectedRate.savedCount,
-          rateReplayFeePercent: selectedRate.replayFeePercent,
-        }
+      ? createRateSnapshot(selectedRate, selectedRateSavedBefore ?? selectedRate.savedCount)
       : form.rateId && editingRecord
         ? {
             rateId: editingRecord.rateId,
@@ -1610,6 +1725,73 @@ export function App() {
     const [year, month] = nextRecord.date.split("-").map(Number);
     setCurrentMonth(new Date(year, month - 1, 1));
     closeEditor();
+  }
+
+  function handleBulkSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canBulkApply) {
+      setBulkMessage("対象になる記録がありません。");
+      return;
+    }
+
+    const adjustments = new Map<string, number>();
+    let pachinkoCount = 0;
+    let slotCount = 0;
+
+    const addAdjustment = (rateId: string | undefined, amount: number) => {
+      if (!rateId || amount === 0) {
+        return;
+      }
+
+      adjustments.set(rateId, (adjustments.get(rateId) ?? 0) + amount);
+    };
+
+    const nextRecords = records.map((record) => {
+      if (record.storeName !== bulkStoreName) {
+        return record;
+      }
+
+      const nextRate =
+        record.rateKind === "pachinko"
+          ? bulkPachinkoRate
+          : record.rateKind === "slot"
+            ? bulkSlotRate
+            : null;
+
+      if (!nextRate) {
+        return record;
+      }
+
+      const savedDifference = savedProfit(record);
+      addAdjustment(record.rateId, -savedDifference);
+      addAdjustment(nextRate.id, savedDifference);
+
+      if (nextRate.kind === "pachinko") {
+        pachinkoCount += 1;
+      } else {
+        slotCount += 1;
+      }
+
+      return {
+        ...record,
+        ...createRateSnapshot(nextRate),
+      };
+    });
+
+    const changedCount = pachinkoCount + slotCount;
+    if (changedCount === 0) {
+      setBulkMessage("対象になる記録がありません。");
+      return;
+    }
+
+    setRecords(nextRecords);
+    saveRecords(nextRecords);
+    updateRateSavedCounts(adjustments);
+    setCsvMessage(
+      `${bulkStoreName}の過去記録を${changedCount}件更新しました。パチンコ${pachinkoCount}件、スロット${slotCount}件です。`,
+    );
+    closeBulkEditor();
   }
 
   function deleteRecord(recordId: string) {
@@ -2007,6 +2189,10 @@ export function App() {
               <Download size={18} />
               CSV出力
             </button>
+            <button className="text-button" type="button" onClick={openBulkEditor}>
+              <Pencil size={18} />
+              一括編集
+            </button>
           </div>
           <input
             ref={csvInputRef}
@@ -2110,6 +2296,108 @@ export function App() {
         </button>
         </div>
       </section>
+
+      {isBulkEditorOpen && (
+        <div className="option-backdrop bulk-editor-backdrop">
+          <section className="option-sheet bulk-editor-sheet" aria-label="一括編集">
+            <header className="option-header">
+              <div>
+                <p className="eyebrow">一括編集</p>
+                <h2>過去記録のレート変更</h2>
+              </div>
+              <button className="icon-button" type="button" onClick={closeBulkEditor} title="閉じる">
+                <X size={20} />
+              </button>
+            </header>
+
+            {bulkStoreOptions.length === 0 ? (
+              <p className="option-empty">一括編集できる店舗がありません。</p>
+            ) : (
+              <form className="record-form" onSubmit={handleBulkSubmit}>
+                <label>
+                  店舗
+                  <select
+                    value={bulkStoreName}
+                    onChange={(event) => updateBulkStore(event.target.value)}
+                  >
+                    {bulkStoreOptions.map((storeName) => (
+                      <option key={storeName} value={storeName}>
+                        {storeName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="bulk-rate-card">
+                  <div className="bulk-rate-head">
+                    <span>パチンコ</span>
+                    <strong>{bulkPachinkoTargetCount}件</strong>
+                  </div>
+                  <select
+                    value={bulkPachinkoRateId}
+                    onChange={(event) => {
+                      setBulkPachinkoRateId(event.target.value);
+                      setBulkMessage("");
+                    }}
+                    disabled={bulkPachinkoRates.length === 0 || bulkPachinkoTargetCount === 0}
+                  >
+                    <option value="">変更しない</option>
+                    {bulkPachinkoRates.map((rate) => (
+                      <option key={rate.id} value={rate.id}>
+                        {rate.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p>
+                    {bulkPachinkoRates.length === 0
+                      ? "この店舗にパチンコのレートが登録されていません。"
+                      : "選んだレートを、この店舗のパチンコ記録へまとめて反映します。"}
+                  </p>
+                </div>
+
+                <div className="bulk-rate-card">
+                  <div className="bulk-rate-head">
+                    <span>スロット</span>
+                    <strong>{bulkSlotTargetCount}件</strong>
+                  </div>
+                  <select
+                    value={bulkSlotRateId}
+                    onChange={(event) => {
+                      setBulkSlotRateId(event.target.value);
+                      setBulkMessage("");
+                    }}
+                    disabled={bulkSlotRates.length === 0 || bulkSlotTargetCount === 0}
+                  >
+                    <option value="">変更しない</option>
+                    {bulkSlotRates.map((rate) => (
+                      <option key={rate.id} value={rate.id}>
+                        {rate.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p>
+                    {bulkSlotRates.length === 0
+                      ? "この店舗にスロットのレートが登録されていません。"
+                      : "選んだレートを、この店舗のスロット記録へまとめて反映します。"}
+                  </p>
+                </div>
+
+                <div className="bulk-preview">
+                  <span>更新対象</span>
+                  <strong>{bulkEditableCount}件</strong>
+                  <p>レート区分がない記録は対象外です。貯玉増減は付け替え後のレート残高にも反映します。</p>
+                </div>
+
+                {bulkMessage && <p className="bulk-message">{bulkMessage}</p>}
+
+                <button className="save-button" type="submit" disabled={!canBulkApply}>
+                  一括更新
+                </button>
+              </form>
+            )}
+          </section>
+        </div>
+      )}
 
       {isEditorOpen && (
         <div className="editor-backdrop">
