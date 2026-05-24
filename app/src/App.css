@@ -361,7 +361,8 @@ h3 {
   overflow-wrap: anywhere;
 }
 
-.chart-line-wrap {
+.chart-line-wrap,
+.chart-bar-wrap {
   margin-top: 12px;
   border: 1px solid #e0e8e5;
   border-radius: 8px;
@@ -369,7 +370,8 @@ h3 {
   padding: 8px;
 }
 
-.chart-line {
+.chart-line,
+.chart-bars {
   display: block;
   width: 100%;
   aspect-ratio: 360 / 190;
@@ -425,6 +427,18 @@ h3 {
 .chart-line-dot.is-empty {
   fill: #c5d0cc;
   stroke-width: 1;
+}
+
+.chart-bar-column {
+  fill: #156a56;
+}
+
+.chart-bar-column.amount-negative {
+  fill: #c64232;
+}
+
+.chart-bar-column.amount-even {
+  fill: #73817c;
 }
 
 .chart-axis-labels {

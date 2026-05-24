@@ -30,3 +30,4 @@
 - Added profit charts with monthly, yearly, lifetime, store, and machine views.
 - Renamed the saved-ball difference display to "貯玉増減" and showed slot saved counts with the medal unit.
 - Changed the profit chart from a bar-style display to a line chart.
+- Changed store and machine profit charts to vertical bar charts.

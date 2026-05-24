@@ -164,6 +164,11 @@ const updateItems = [
     title: "収支グラフを折れ線に変更",
     body: "収支の流れが見やすいように、グラフ表示を棒から折れ線へ変更しました。",
   },
+  {
+    date: "2026-05-24",
+    title: "店舗別と機種別を縦棒に変更",
+    body: "店舗別と機種別の収支グラフは、比較しやすい縦棒グラフで表示するようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -1061,12 +1066,28 @@ export function App() {
     });
     const linePath = chartPointPath(coordinates);
     const zeroY = toY(0);
+    const step = coordinates.length > 0 ? innerWidth / coordinates.length : innerWidth;
+    const barWidth = Math.min(28, Math.max(12, step * 0.62));
+    const barCoordinates = coordinates.map((point, index) => {
+      const valueY = toY(point.plotValue);
+      const isEven = point.plotValue === 0;
+      const height = isEven ? 2 : Math.abs(valueY - zeroY);
+      const y = isEven ? zeroY - 1 : Math.min(valueY, zeroY);
+
+      return {
+        ...point,
+        barHeight: height,
+        barWidth,
+        barX: chartPadding.left + step * index + (step - barWidth) / 2,
+        barY: y,
+      };
+    });
     const areaPath =
       coordinates.length > 0
         ? `${linePath} L ${coordinates[coordinates.length - 1].x} ${zeroY} L ${coordinates[0].x} ${zeroY} Z`
         : "";
 
-    return { areaPath, coordinates, linePath, zeroY };
+    return { areaPath, barCoordinates, coordinates, linePath, zeroY };
   }, [chartData]);
   const filteredOptions = useMemo(() => {
     if (!selectorField) {
@@ -1691,10 +1712,10 @@ export function App() {
                 </div>
               </div>
 
-              <div className="chart-line-wrap">
+              <div className={chartData.isTrend ? "chart-line-wrap" : "chart-bar-wrap"}>
                 <svg
-                  aria-label={`${chartData.title}の折れ線グラフ`}
-                  className="chart-line"
+                  aria-label={`${chartData.title}の${chartData.isTrend ? "折れ線" : "縦棒"}グラフ`}
+                  className={chartData.isTrend ? "chart-line" : "chart-bars"}
                   role="img"
                   viewBox={`0 0 ${chartSvgWidth} ${chartSvgHeight}`}
                 >
@@ -1725,25 +1746,45 @@ export function App() {
                   <text className="chart-y-label" x={4} y={chartSvgHeight - chartPadding.bottom + 4}>
                     {signedCurrency(Math.round(chartData.plotMin))}
                   </text>
-                  {chartGeometry.areaPath && (
-                    <path className="chart-line-area" d={chartGeometry.areaPath} />
+                  {chartData.isTrend ? (
+                    <>
+                      {chartGeometry.areaPath && (
+                        <path className="chart-line-area" d={chartGeometry.areaPath} />
+                      )}
+                      {chartGeometry.linePath && (
+                        <path className="chart-line-path" d={chartGeometry.linePath} />
+                      )}
+                      {chartGeometry.coordinates.map((point) => (
+                        <circle
+                          className={`chart-line-dot ${point.count > 0 ? classForAmount(point.value) : "is-empty"}`}
+                          cx={point.x}
+                          cy={point.y}
+                          key={point.key}
+                          r={point.count > 0 ? 3.5 : 2}
+                        >
+                          <title>
+                            {point.label} {signedCurrency(point.plotValue)}
+                          </title>
+                        </circle>
+                      ))}
+                    </>
+                  ) : (
+                    chartGeometry.barCoordinates.map((point) => (
+                      <rect
+                        className={`chart-bar-column ${classForAmount(point.value)}`}
+                        height={point.barHeight}
+                        key={point.key}
+                        rx={4}
+                        width={point.barWidth}
+                        x={point.barX}
+                        y={point.barY}
+                      >
+                        <title>
+                          {point.label} {signedCurrency(point.value)}
+                        </title>
+                      </rect>
+                    ))
                   )}
-                  {chartGeometry.linePath && (
-                    <path className="chart-line-path" d={chartGeometry.linePath} />
-                  )}
-                  {chartGeometry.coordinates.map((point) => (
-                    <circle
-                      className={`chart-line-dot ${point.count > 0 ? classForAmount(point.value) : "is-empty"}`}
-                      cx={point.x}
-                      cy={point.y}
-                      key={point.key}
-                      r={point.count > 0 ? 3.5 : 2}
-                    >
-                      <title>
-                        {point.label} {signedCurrency(chartData.isTrend ? point.plotValue : point.value)}
-                      </title>
-                    </circle>
-                  ))}
                 </svg>
                 <div className="chart-axis-labels">
                   <span>{chartData.linePoints[0]?.label ?? ""}</span>

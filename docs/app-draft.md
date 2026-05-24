@@ -35,6 +35,7 @@ Implemented draft behavior:
 - Show profit charts by month, year, lifetime, store, and machine.
 - Show saved-ball change as "貯玉増減", and show slot saved counts with the medal unit.
 - Show the profit chart as a line chart instead of a bar chart.
+- Show store and machine profit charts as vertical bar charts.
 
 ## Saved Fields
 
@@ -67,8 +68,8 @@ The home screen includes a line-style profit chart with five views:
 - Monthly view: cumulative daily profit for the displayed month.
 - Yearly view: cumulative monthly profit for the displayed year.
 - Lifetime view: cumulative yearly profit across all records.
-- Store view: profit grouped by store.
-- Machine view: profit grouped by machine.
+- Store view: profit grouped by store in a vertical bar chart.
+- Machine view: profit grouped by machine in a vertical bar chart.
 
 ## Rate Settings
 
