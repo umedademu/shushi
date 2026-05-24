@@ -189,6 +189,7 @@ h3 {
   gap: 2px;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   padding: 2px;
 }
 
@@ -203,9 +204,12 @@ h3 {
 }
 
 .day-cell small {
-  font-size: 10px;
+  width: 100%;
+  font-size: 9px;
   font-weight: 800;
   line-height: 1;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .day-cell.today {
@@ -1054,19 +1058,10 @@ h3 {
   }
 
   .dashboard-frame {
-    max-width: 980px;
-    display: grid;
-    grid-template-columns: minmax(360px, 460px) minmax(360px, 1fr);
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
     gap: 14px;
-    align-items: start;
-  }
-
-  .dashboard-left {
-    grid-column: 1;
-  }
-
-  .dashboard-right {
-    grid-column: 2;
   }
 
   .dashboard-left,
@@ -1083,6 +1078,18 @@ h3 {
 
   .dashboard-left .top-bar {
     padding-bottom: 0;
+  }
+
+  .month-panel {
+    padding: 18px;
+  }
+
+  .calendar-grid {
+    gap: 8px;
+  }
+
+  .day-cell small {
+    font-size: 11px;
   }
 
   .summary-grid {

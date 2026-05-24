@@ -174,6 +174,11 @@ const updateItems = [
     title: "PC表示の余白を調整",
     body: "重複していた選択日カードをなくし、PC表示でサマリーとグラフが右側に自然に並ぶようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "PC表示を幅広の1列に変更",
+    body: "PC表示でも縦1列にし、カレンダーの日別収支はk表記ではなく円単位の数字で表示するようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -222,6 +227,12 @@ function currency(value: number) {
 function signedCurrency(value: number) {
   const sign = value > 0 ? "+" : "";
   return `${sign}${currency(value)}`;
+}
+
+function signedPlainAmount(value: number) {
+  const rounded = Math.round(value);
+  const sign = rounded > 0 ? "+" : "";
+  return `${sign}${rounded}`;
 }
 
 function loadRecords(): PlayRecord[] {
@@ -1623,8 +1634,7 @@ export function App() {
                     <span>{dayNumber}</span>
                     {dayRecords.length > 0 && (
                       <small className={classForAmount(dayProfit)}>
-                        {dayProfit > 0 ? "+" : ""}
-                        {Math.round(dayProfit / 1000)}k
+                        {signedPlainAmount(dayProfit)}
                       </small>
                     )}
                   </button>

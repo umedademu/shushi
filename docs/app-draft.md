@@ -38,6 +38,8 @@ Implemented draft behavior:
 - Show store and machine profit charts as vertical bar charts.
 - Use the top-right edit icon as the only entry point for adding a play record.
 - Remove the duplicated selected-day add card and tighten the desktop layout.
+- Show the desktop view as a wider single column.
+- Show daily calendar profit in plain yen units instead of k units.
 
 ## Saved Fields
 
