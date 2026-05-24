@@ -45,6 +45,7 @@ Implemented draft behavior:
 - Show daily calendar profit in plain yen units with comma separators instead of k units.
 - Show selected-day details in the order: summary, play record cards, then profit chart.
 - Show positive profit and positive saved-ball changes in blue, while keeping selected calendar day values readable.
+- Move the monthly chart to the previous or next month with buttons that stay linked to the main calendar month.
 
 ## Saved Fields
 
@@ -79,6 +80,8 @@ The home screen includes a line-style profit chart with five views:
 - Lifetime view: cumulative yearly profit across all records.
 - Store view: profit grouped by store in a horizontal bar list.
 - Machine view: profit grouped by machine in a horizontal bar list.
+
+The monthly chart uses the same displayed month as the main calendar. Moving the month from either place updates both sections.
 
 Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right.
 

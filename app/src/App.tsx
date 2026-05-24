@@ -206,6 +206,11 @@ const updateItems = [
     title: "カレンダー収支をカンマ区切りに変更",
     body: "カレンダーの日別収支を、+60,240 のようにカンマ付きで表示するようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "月別グラフの月移動を追加",
+    body: "月別グラフにも前月・次月ボタンを追加し、メインカレンダーの月表示と連動するようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -1776,7 +1781,31 @@ export function App() {
           </div>
 
           <div className="chart-title-row">
-            <span>{chartData.title}</span>
+            <div className="chart-title-main">
+              {chartMode === "month" && (
+                <button
+                  aria-label="月別グラフを前の月へ"
+                  className="chart-month-button"
+                  type="button"
+                  onClick={() => moveMonth(-1)}
+                  title="前の月"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+              )}
+              <span>{chartData.title}</span>
+              {chartMode === "month" && (
+                <button
+                  aria-label="月別グラフを次の月へ"
+                  className="chart-month-button"
+                  type="button"
+                  onClick={() => moveMonth(1)}
+                  title="次の月"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              )}
+            </div>
             <strong>{chartData.count}件</strong>
           </div>
 

@@ -38,3 +38,4 @@
 - Added expected value to profit charts: line charts show a second line, and store or machine charts show adjacent bars.
 - Changed expected value displays to use plus/minus signs and amount colors, and changed store or machine charts to horizontal bar rows.
 - Changed daily calendar profit to use comma-separated plain yen numbers.
+- Added previous and next month buttons to the monthly chart, linked to the main calendar month.

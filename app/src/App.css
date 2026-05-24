@@ -344,7 +344,33 @@ h3 {
   font-weight: 800;
 }
 
+.chart-title-main {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+}
+
+.chart-title-main span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chart-month-button {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: #edf3f1;
+  color: #263632;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .chart-title-row strong {
+  flex: 0 0 auto;
   color: #14231f;
 }
 
