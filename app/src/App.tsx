@@ -122,6 +122,11 @@ const updateItems = [
     title: "CSVの取り込みと書き出しを追加",
     body: "収支記録をCSVで出力できるようにし、pRecordから出したCSVも取り込めるようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "稼働記録の編集を追加",
+    body: "日別の記録カード全体を押して、保存済みの稼働記録を編集できるようにしました。",
+  },
 ];
 
 function pad(value: number) {
@@ -260,6 +265,24 @@ function createForm(date: string, isFirstRecordForDay = false): RecordForm {
     savedRecovery: "",
     expectedValue: "",
     note: "",
+  };
+}
+
+function createFormFromRecord(record: PlayRecord): RecordForm {
+  return {
+    date: record.date,
+    startTime: record.startTime,
+    endTime: record.endTime,
+    storeName: record.storeName,
+    machineName: record.machineName,
+    rateId: record.rateId ?? "",
+    rateName: record.rateName ?? "",
+    investment: String(record.investment || ""),
+    recovery: String(record.recovery || ""),
+    savedInvestment: String(record.savedInvestment || ""),
+    savedRecovery: String(record.savedRecovery || ""),
+    expectedValue: String(record.expectedValue || ""),
+    note: record.note,
   };
 }
 
@@ -664,6 +687,7 @@ export function App() {
   const [isRateSelectorOpen, setIsRateSelectorOpen] = useState(false);
   const [isRateEditorOpen, setIsRateEditorOpen] = useState(false);
   const [editingRateId, setEditingRateId] = useState<string | null>(null);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [rateForm, setRateForm] = useState<RateForm>(() => createRateForm());
   const [csvMessage, setCsvMessage] = useState("");
 
@@ -750,9 +774,18 @@ export function App() {
     () => selectedStoreRates.find((rate) => rate.id === form.rateId) ?? null,
     [form.rateId, selectedStoreRates],
   );
-  const canSave = Boolean(form.storeName && form.machineName && selectedRate);
+  const editingRecord = useMemo(
+    () => records.find((record) => record.id === editingRecordId) ?? null,
+    [editingRecordId, records],
+  );
+  const canSave = Boolean(form.storeName && form.machineName && (selectedRate || editingRecord));
   const formSavedDifference = toNumber(form.savedRecovery) - toNumber(form.savedInvestment);
-  const selectedRateSavedAfter = selectedRate ? selectedRate.savedCount + formSavedDifference : null;
+  const selectedRateSavedBefore =
+    selectedRate && editingRecord?.rateId === selectedRate.id
+      ? selectedRate.savedCount - savedProfit(editingRecord)
+      : selectedRate?.savedCount ?? null;
+  const selectedRateSavedAfter =
+    selectedRateSavedBefore !== null ? selectedRateSavedBefore + formSavedDifference : null;
 
   function exportRecordsToCsv() {
     if (records.length === 0) {
@@ -825,8 +858,26 @@ export function App() {
 
   function openEditor(date = selectedDate) {
     const isFirstRecordForDay = !records.some((record) => record.date === date);
+    setEditingRecordId(null);
     setForm(createForm(date, isFirstRecordForDay));
     setIsEditorOpen(true);
+  }
+
+  function openRecordEditor(record: PlayRecord) {
+    setSelectedDate(record.date);
+    setEditingRecordId(record.id);
+    setForm(createFormFromRecord(record));
+    setIsEditorOpen(true);
+  }
+
+  function closeEditor() {
+    setIsEditorOpen(false);
+    setEditingRecordId(null);
+    setSelectorField(null);
+    setSelectorQuery("");
+    setIsRateSelectorOpen(false);
+    setIsRateEditorOpen(false);
+    setEditingRateId(null);
   }
 
   function updateForm(key: keyof RecordForm, value: string) {
@@ -1013,24 +1064,40 @@ export function App() {
     const storeName = form.storeName.trim();
     const machineName = form.machineName.trim();
 
-    if (!storeName || !machineName || !selectedRate) {
+    if (!storeName || !machineName || (!selectedRate && !editingRecord)) {
       return;
     }
 
-    const newRecord: PlayRecord = {
-      id: crypto.randomUUID(),
+    const rateSnapshot = selectedRate
+      ? {
+          rateId: selectedRate.id,
+          rateName: selectedRate.name,
+          rateKind: selectedRate.kind,
+          rateUnitPrice: selectedRate.unitPrice,
+          rateExchangeCountPer100Yen: selectedRate.exchangeCountPer100Yen,
+          rateSavedCount: selectedRateSavedBefore ?? selectedRate.savedCount,
+          rateReplayFeePercent: selectedRate.replayFeePercent,
+        }
+      : form.rateId && editingRecord
+        ? {
+            rateId: editingRecord.rateId,
+            rateName: editingRecord.rateName,
+            rateKind: editingRecord.rateKind,
+            rateUnitPrice: editingRecord.rateUnitPrice,
+            rateExchangeCountPer100Yen: editingRecord.rateExchangeCountPer100Yen,
+            rateSavedCount: editingRecord.rateSavedCount,
+            rateReplayFeePercent: editingRecord.rateReplayFeePercent,
+          }
+        : {};
+
+    const nextRecord: PlayRecord = {
+      id: editingRecord?.id ?? crypto.randomUUID(),
       date: form.date,
       startTime: form.startTime,
       endTime: form.endTime,
       storeName,
       machineName,
-      rateId: selectedRate.id,
-      rateName: selectedRate.name,
-      rateKind: selectedRate.kind,
-      rateUnitPrice: selectedRate.unitPrice,
-      rateExchangeCountPer100Yen: selectedRate.exchangeCountPer100Yen,
-      rateSavedCount: selectedRate.savedCount,
-      rateReplayFeePercent: selectedRate.replayFeePercent,
+      ...rateSnapshot,
       investment: toNumber(form.investment),
       recovery: toNumber(form.recovery),
       savedInvestment: toNumber(form.savedInvestment),
@@ -1039,14 +1106,19 @@ export function App() {
       note: form.note.trim(),
     };
 
-    const nextRecords = [...records, newRecord];
+    const nextRecords = editingRecord
+      ? records.map((record) => (record.id === editingRecord.id ? nextRecord : record))
+      : [...records, nextRecord];
     setRecords(nextRecords);
     saveRecords(nextRecords);
-    updateRateSavedCount(selectedRate.id, savedProfit(newRecord));
-    setSelectedDate(newRecord.date);
-    const [year, month] = newRecord.date.split("-").map(Number);
+    if (editingRecord) {
+      updateRateSavedCount(editingRecord.rateId, -savedProfit(editingRecord));
+    }
+    updateRateSavedCount(nextRecord.rateId, savedProfit(nextRecord));
+    setSelectedDate(nextRecord.date);
+    const [year, month] = nextRecord.date.split("-").map(Number);
     setCurrentMonth(new Date(year, month - 1, 1));
-    setIsEditorOpen(false);
+    closeEditor();
   }
 
   function deleteRecord(recordId: string) {
@@ -1057,6 +1129,10 @@ export function App() {
 
     if (deletedRecord) {
       updateRateSavedCount(deletedRecord.rateId, -savedProfit(deletedRecord));
+    }
+
+    if (editingRecordId === recordId) {
+      closeEditor();
     }
   }
 
@@ -1218,7 +1294,20 @@ export function App() {
             </div>
           ) : (
             selectedRecords.map((record) => (
-              <article className="record-item" key={record.id}>
+              <article
+                aria-label={`${record.machineName}の記録を編集`}
+                className="record-item record-editable"
+                key={record.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openRecordEditor(record)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openRecordEditor(record);
+                  }
+                }}
+              >
                 <div className="record-head">
                   <div>
                     <h3>{record.machineName}</h3>
@@ -1269,7 +1358,10 @@ export function App() {
                 <button
                   className="delete-button"
                   type="button"
-                  onClick={() => deleteRecord(record.id)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    deleteRecord(record.id);
+                  }}
                   title="記録を削除"
                 >
                   <Trash2 size={16} />
@@ -1290,10 +1382,10 @@ export function App() {
           <section className="editor-sheet" aria-label="収支入力">
             <header className="editor-header">
               <div>
-                <p className="eyebrow">入力</p>
-                <h2>稼働記録</h2>
+                <p className="eyebrow">{editingRecord ? "編集" : "入力"}</p>
+                <h2>{editingRecord ? "稼働記録を編集" : "稼働記録"}</h2>
               </div>
-              <button className="icon-button" type="button" onClick={() => setIsEditorOpen(false)} title="閉じる">
+              <button className="icon-button" type="button" onClick={closeEditor} title="閉じる">
                 <X size={20} />
               </button>
             </header>
@@ -1467,7 +1559,7 @@ export function App() {
               </div>
 
               <button className="save-button" type="submit" disabled={!canSave}>
-                保存
+                {editingRecord ? "更新" : "保存"}
               </button>
             </form>
 

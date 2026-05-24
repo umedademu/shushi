@@ -304,6 +304,20 @@ h3 {
   padding: 14px;
 }
 
+.record-editable {
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.record-editable:hover,
+.record-editable:focus-visible {
+  border-color: #9ab7af;
+  box-shadow: 0 12px 32px rgba(40, 54, 50, 0.12);
+  outline: 0;
+}
+
 .record-head p {
   color: #64726e;
   font-size: 13px;

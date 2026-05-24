@@ -29,6 +29,7 @@ Implemented draft behavior:
 - Restore that saved-ball count adjustment when a play record is deleted.
 - Export play records as CSV.
 - Import CSV files exported from this app or from pRecord.
+- Edit a saved play record by selecting its daily record card.
 
 ## Saved Fields
 
@@ -75,6 +76,7 @@ Saved balls are updated automatically from each play record:
 - Saved-ball investment decreases the selected rate's current saved-ball count.
 - Saved-ball recovery increases the selected rate's current saved-ball count.
 - Deleting a play record reverses the same saved-ball change.
+- Editing a play record reverses the old saved-ball change and applies the new one.
 
 ## Notes
 
