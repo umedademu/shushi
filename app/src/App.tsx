@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import "./App.css";
 import { machineOptions, storeOptions } from "./data/catalog";
@@ -29,6 +29,7 @@ type RecordForm = {
 };
 
 type ViewMode = "home" | "updates";
+type OptionField = "storeName" | "machineName";
 
 const storageKey = "shushi-play-records";
 
@@ -43,6 +44,16 @@ const updateItems = [
     title: "時刻入力を5分刻みに変更",
     body: "開始時刻と終了時刻を5分単位で入力しやすいようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "時刻の初期値を追加",
+    body: "その日の初回入力は開始時刻を10:00にし、終了時刻には現在時刻を入れるようにしました。",
+  },
+  {
+    date: "2026-05-24",
+    title: "店舗と機種の選択画面を追加",
+    body: "店舗名と機種名を、スマホでも押して選べる検索付きの選択画面に変更しました。",
+  },
 ];
 
 function pad(value: number) {
@@ -55,6 +66,12 @@ function toDateKey(date: Date) {
 
 function todayKey() {
   return toDateKey(new Date());
+}
+
+function currentTimeKey() {
+  const now = new Date();
+  const minutes = Math.floor(now.getMinutes() / 5) * 5;
+  return `${pad(now.getHours())}:${pad(minutes)}`;
 }
 
 function monthLabel(date: Date) {
@@ -93,11 +110,11 @@ function saveRecords(records: PlayRecord[]) {
   window.localStorage.setItem(storageKey, JSON.stringify(records));
 }
 
-function createForm(date: string): RecordForm {
+function createForm(date: string, isFirstRecordForDay = false): RecordForm {
   return {
     date,
-    startTime: "",
-    endTime: "",
+    startTime: isFirstRecordForDay ? "10:00" : "",
+    endTime: currentTimeKey(),
     storeName: "",
     machineName: "",
     investment: "",
@@ -162,6 +179,10 @@ function classForAmount(value: number) {
   return "amount-even";
 }
 
+function normalizeOptionText(value: string) {
+  return value.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
+}
+
 export function App() {
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -170,8 +191,10 @@ export function App() {
   });
   const [records, setRecords] = useState<PlayRecord[]>(loadRecords);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [form, setForm] = useState<RecordForm>(() => createForm(todayKey()));
+  const [form, setForm] = useState<RecordForm>(() => createForm(todayKey(), true));
   const [viewMode, setViewMode] = useState<ViewMode>("home");
+  const [selectorField, setSelectorField] = useState<OptionField | null>(null);
+  const [selectorQuery, setSelectorQuery] = useState("");
 
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
 
@@ -198,6 +221,25 @@ export function App() {
     0,
   );
   const monthProfit = monthRecords.reduce((total, record) => total + profit(record), 0);
+  const filteredOptions = useMemo(() => {
+    if (!selectorField) {
+      return [];
+    }
+
+    const options = selectorField === "storeName" ? storeOptions : machineOptions;
+    const query = normalizeOptionText(selectorQuery);
+    const matches = query
+      ? options.filter((option) => normalizeOptionText(option).includes(query))
+      : options;
+
+    return matches.slice(0, 80);
+  }, [selectorField, selectorQuery]);
+  const selectorTitle =
+    selectorField === "storeName" ? "店舗を選択" : selectorField === "machineName" ? "機種を選択" : "";
+  const selectorCount =
+    selectorField === "storeName" ? storeOptions.length : selectorField === "machineName" ? machineOptions.length : 0;
+  const selectedOption = selectorField ? form[selectorField] : "";
+  const canSave = Boolean(form.storeName && form.machineName);
 
   function moveMonth(amount: number) {
     setCurrentMonth(
@@ -206,7 +248,8 @@ export function App() {
   }
 
   function openEditor(date = selectedDate) {
-    setForm(createForm(date));
+    const isFirstRecordForDay = !records.some((record) => record.date === date);
+    setForm(createForm(date, isFirstRecordForDay));
     setIsEditorOpen(true);
   }
 
@@ -214,16 +257,41 @@ export function App() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function openOptionSelector(field: OptionField) {
+    setSelectorField(field);
+    setSelectorQuery("");
+  }
+
+  function closeOptionSelector() {
+    setSelectorField(null);
+    setSelectorQuery("");
+  }
+
+  function selectOption(value: string) {
+    if (!selectorField) {
+      return;
+    }
+
+    updateForm(selectorField, value);
+    closeOptionSelector();
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const storeName = form.storeName.trim();
+    const machineName = form.machineName.trim();
+
+    if (!storeName || !machineName) {
+      return;
+    }
 
     const newRecord: PlayRecord = {
       id: crypto.randomUUID(),
       date: form.date,
       startTime: form.startTime,
       endTime: form.endTime,
-      storeName: form.storeName.trim(),
-      machineName: form.machineName.trim(),
+      storeName,
+      machineName,
       investment: toNumber(form.investment),
       recovery: toNumber(form.recovery),
       expectedValue: toNumber(form.expectedValue),
@@ -471,27 +539,29 @@ export function App() {
                 </label>
               </div>
 
-              <label>
-                店舗
-                <input
-                  list="store-options"
-                  value={form.storeName}
-                  onChange={(event) => updateForm("storeName", event.target.value)}
-                  placeholder="店舗名を入力"
-                  required
-                />
-              </label>
+              <div className="choice-field">
+                <span>店舗</span>
+                <button
+                  className={`select-button ${form.storeName ? "" : "is-empty"}`}
+                  type="button"
+                  onClick={() => openOptionSelector("storeName")}
+                >
+                  <span>{form.storeName || "店舗を選択"}</span>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
 
-              <label>
-                機種
-                <input
-                  list="machine-options"
-                  value={form.machineName}
-                  onChange={(event) => updateForm("machineName", event.target.value)}
-                  placeholder="機種名を入力"
-                  required
-                />
-              </label>
+              <div className="choice-field">
+                <span>機種</span>
+                <button
+                  className={`select-button ${form.machineName ? "" : "is-empty"}`}
+                  type="button"
+                  onClick={() => openOptionSelector("machineName")}
+                >
+                  <span>{form.machineName || "機種を選択"}</span>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
 
               <div className="form-pair">
                 <label>
@@ -548,21 +618,62 @@ export function App() {
                 </strong>
               </div>
 
-              <button className="save-button" type="submit">
+              <button className="save-button" type="submit" disabled={!canSave}>
                 保存
               </button>
             </form>
 
-            <datalist id="store-options">
-              {storeOptions.map((store) => (
-                <option key={store} value={store} />
-              ))}
-            </datalist>
-            <datalist id="machine-options">
-              {machineOptions.map((machine) => (
-                <option key={machine} value={machine} />
-              ))}
-            </datalist>
+            {selectorField && (
+              <div className="option-backdrop">
+                <section className="option-sheet" aria-label={selectorTitle}>
+                  <header className="option-header">
+                    <div>
+                      <p className="eyebrow">選択</p>
+                      <h2>{selectorTitle}</h2>
+                    </div>
+                    <button className="icon-button" type="button" onClick={closeOptionSelector} title="閉じる">
+                      <X size={20} />
+                    </button>
+                  </header>
+
+                  <label className="option-search">
+                    <Search size={18} />
+                    <input
+                      autoFocus
+                      value={selectorQuery}
+                      onChange={(event) => setSelectorQuery(event.target.value)}
+                      placeholder="検索"
+                    />
+                  </label>
+
+                  <p className="option-count">
+                    {filteredOptions.length} / {selectorCount}
+                  </p>
+
+                  <div className="option-list">
+                    {filteredOptions.length === 0 ? (
+                      <p className="option-empty">該当する候補はありません。</p>
+                    ) : (
+                      filteredOptions.map((option) => {
+                        const isSelected = option === selectedOption;
+
+                        return (
+                          <button
+                            className={`option-row ${isSelected ? "is-selected" : ""}`}
+                            key={option}
+                            type="button"
+                            onClick={() => selectOption(option)}
+                          >
+                            <span>{option}</span>
+                            {isSelected && <Check size={18} />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </section>
+              </div>
+            )}
           </section>
         </div>
       )}

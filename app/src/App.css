@@ -365,12 +365,17 @@ h3 {
   margin-top: 16px;
 }
 
-.record-form label {
+.record-form label,
+.choice-field {
   color: #31413d;
   display: grid;
   gap: 6px;
   font-size: 13px;
   font-weight: 800;
+}
+
+.choice-field > span {
+  display: block;
 }
 
 .record-form input,
@@ -386,6 +391,32 @@ h3 {
 
 .record-form textarea {
   resize: vertical;
+}
+
+.select-button {
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #d4dfdb;
+  border-radius: 8px;
+  background: #fbfcfb;
+  color: #15231f;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  text-align: left;
+}
+
+.select-button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-button.is-empty {
+  color: #7c8a86;
 }
 
 .form-pair {
@@ -421,6 +452,111 @@ h3 {
   color: #ffffff;
   font-size: 16px;
   font-weight: 900;
+}
+
+.save-button:disabled {
+  background: #9fb5ae;
+  cursor: not-allowed;
+}
+
+.option-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(10, 18, 16, 0.38);
+  padding: 14px;
+}
+
+.option-sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 28px);
+  border-radius: 8px;
+  background: #ffffff;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+}
+
+.option-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.option-search {
+  align-items: center;
+  border: 1px solid #d4dfdb;
+  border-radius: 8px;
+  background: #fbfcfb;
+  color: #52615d;
+  display: flex;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.option-search input {
+  min-width: 0;
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  background: transparent;
+  color: #15231f;
+  font-size: 16px;
+  outline: 0;
+}
+
+.option-count {
+  color: #65736f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.option-list {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 6px;
+  padding-right: 2px;
+}
+
+.option-row {
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #e0e7e4;
+  border-radius: 8px;
+  background: #fbfcfb;
+  color: #1a2724;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.option-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.option-row.is-selected {
+  border-color: #156a56;
+  background: #eaf3f0;
+  color: #145746;
+  font-weight: 800;
+}
+
+.option-empty {
+  color: #697773;
+  font-size: 14px;
+  text-align: center;
+  padding: 18px 0;
 }
 
 .updates-list {
