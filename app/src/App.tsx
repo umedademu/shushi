@@ -169,6 +169,11 @@ const updateItems = [
     title: "店舗別と機種別を縦棒に変更",
     body: "店舗別と機種別の収支グラフは、比較しやすい縦棒グラフで表示するようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "PC表示の余白を調整",
+    body: "重複していた選択日カードをなくし、PC表示でサマリーとグラフが右側に自然に並ぶようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -208,11 +213,6 @@ function currentTimeKey() {
 
 function monthLabel(date: Date) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月`;
-}
-
-function displayDate(dateKey: string) {
-  const [year, month, day] = dateKey.split("-");
-  return `${Number(year)}年${Number(month)}月${Number(day)}日`;
 }
 
 function currency(value: number) {
@@ -1561,82 +1561,80 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <section className="phone-frame">
-        <header className="top-bar">
-          <div>
-            <p className="eyebrow">shushi</p>
-            <h1>収支管理</h1>
-          </div>
-          <button className="icon-button primary" type="button" onClick={() => openEditor()} title="収支を入力">
-            <Pencil size={20} />
-          </button>
-        </header>
-
-        <section className="month-panel">
-          <div className="month-header">
-            <button className="icon-button" type="button" onClick={() => moveMonth(-1)} title="前の月">
-              <ChevronLeft size={20} />
-            </button>
+      <section className="phone-frame dashboard-frame">
+        <div className="dashboard-left">
+          <header className="top-bar">
             <div>
-              <p className="month-label">{monthLabel(currentMonth)}</p>
-              <p className={`month-total ${classForAmount(monthProfit)}`}>
-                {signedCurrency(monthProfit)}
-              </p>
+              <p className="eyebrow">shushi</p>
+              <h1>収支管理</h1>
             </div>
-            <button className="icon-button" type="button" onClick={() => moveMonth(1)} title="次の月">
-              <ChevronRight size={20} />
+            <button
+              aria-label="収支を入力"
+              className="icon-button primary"
+              type="button"
+              onClick={() => openEditor()}
+              title="収支を入力"
+            >
+              <Pencil size={20} />
             </button>
-          </div>
+          </header>
 
-          <div className="week-row">
-            {["日", "月", "火", "水", "木", "金", "土"].map((label) => (
-              <span key={label}>{label}</span>
-            ))}
-          </div>
+          <section className="month-panel">
+            <div className="month-header">
+              <button className="icon-button" type="button" onClick={() => moveMonth(-1)} title="前の月">
+                <ChevronLeft size={20} />
+              </button>
+              <div>
+                <p className="month-label">{monthLabel(currentMonth)}</p>
+                <p className={`month-total ${classForAmount(monthProfit)}`}>
+                  {signedCurrency(monthProfit)}
+                </p>
+              </div>
+              <button className="icon-button" type="button" onClick={() => moveMonth(1)} title="次の月">
+                <ChevronRight size={20} />
+              </button>
+            </div>
 
-          <div className="calendar-grid">
-            {days.map((dateKey, index) => {
-              if (!dateKey) {
-                return <div className="day-cell empty" key={`empty-${index}`} />;
-              }
+            <div className="week-row">
+              {["日", "月", "火", "水", "木", "金", "土"].map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
 
-              const dayRecords = records.filter((record) => record.date === dateKey);
-              const dayProfit = dayRecords.reduce((total, record) => total + profit(record), 0);
-              const isSelected = dateKey === selectedDate;
-              const isToday = dateKey === todayKey();
-              const dayNumber = Number(dateKey.split("-")[2]);
+            <div className="calendar-grid">
+              {days.map((dateKey, index) => {
+                if (!dateKey) {
+                  return <div className="day-cell empty" key={`empty-${index}`} />;
+                }
 
-              return (
-                <button
-                  className={`day-cell ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
-                  key={dateKey}
-                  type="button"
-                  onClick={() => setSelectedDate(dateKey)}
-                >
-                  <span>{dayNumber}</span>
-                  {dayRecords.length > 0 && (
-                    <small className={classForAmount(dayProfit)}>
-                      {dayProfit > 0 ? "+" : ""}
-                      {Math.round(dayProfit / 1000)}k
-                    </small>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </section>
+                const dayRecords = records.filter((record) => record.date === dateKey);
+                const dayProfit = dayRecords.reduce((total, record) => total + profit(record), 0);
+                const isSelected = dateKey === selectedDate;
+                const isToday = dateKey === todayKey();
+                const dayNumber = Number(dateKey.split("-")[2]);
 
-        <section className="day-summary">
-          <div>
-            <p className="eyebrow">選択日</p>
-            <h2>{displayDate(selectedDate)}</h2>
-          </div>
-          <button className="text-button" type="button" onClick={() => openEditor()}>
-            <Plus size={18} />
-            追加
-          </button>
-        </section>
+                return (
+                  <button
+                    className={`day-cell ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
+                    key={dateKey}
+                    type="button"
+                    onClick={() => setSelectedDate(dateKey)}
+                  >
+                    <span>{dayNumber}</span>
+                    {dayRecords.length > 0 && (
+                      <small className={classForAmount(dayProfit)}>
+                        {dayProfit > 0 ? "+" : ""}
+                        {Math.round(dayProfit / 1000)}k
+                      </small>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </div>
 
+        <div className="dashboard-right">
         <section className="summary-grid">
           <div>
             <span>収支</span>
@@ -1920,6 +1918,7 @@ export function App() {
         <button className="updates-button" type="button" onClick={() => setViewMode("updates")}>
           更新情報を見る
         </button>
+        </div>
       </section>
 
       {isEditorOpen && (

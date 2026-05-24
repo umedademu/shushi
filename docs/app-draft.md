@@ -36,6 +36,8 @@ Implemented draft behavior:
 - Show saved-ball change as "貯玉増減", and show slot saved counts with the medal unit.
 - Show the profit chart as a line chart instead of a bar chart.
 - Show store and machine profit charts as vertical bar charts.
+- Use the top-right edit icon as the only entry point for adding a play record.
+- Remove the duplicated selected-day add card and tighten the desktop layout.
 
 ## Saved Fields
 

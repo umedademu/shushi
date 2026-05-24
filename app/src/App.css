@@ -43,6 +43,11 @@ button {
   padding: 18px 14px 28px;
 }
 
+.dashboard-left,
+.dashboard-right {
+  min-width: 0;
+}
+
 h1,
 h2,
 h3,
@@ -74,7 +79,6 @@ h3 {
 
 .top-bar,
 .month-header,
-.day-summary,
 .editor-header,
 .record-head {
   align-items: center;
@@ -124,7 +128,6 @@ h3 {
 }
 
 .month-panel,
-.day-summary,
 .summary-grid,
 .chart-panel,
 .csv-panel,
@@ -219,11 +222,6 @@ h3 {
 .day-cell.selected .amount-negative,
 .day-cell.selected .amount-even {
   color: #ffffff;
-}
-
-.day-summary {
-  margin-top: 14px;
-  padding: 14px;
 }
 
 .text-button {
@@ -1052,30 +1050,39 @@ h3 {
   }
 
   .phone-frame {
-    max-width: 980px;
     min-height: auto;
+  }
+
+  .dashboard-frame {
+    max-width: 980px;
     display: grid;
     grid-template-columns: minmax(360px, 460px) minmax(360px, 1fr);
     gap: 14px;
     align-items: start;
   }
 
-  .top-bar,
-  .month-panel {
+  .dashboard-left {
     grid-column: 1;
   }
 
-  .day-summary,
-  .summary-grid,
-  .chart-panel,
-  .csv-panel,
-  .record-list,
-  .updates-button {
+  .dashboard-right {
     grid-column: 2;
   }
 
-  .day-summary {
+  .dashboard-left,
+  .dashboard-right {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .dashboard-left .top-bar,
+  .dashboard-right > * {
     margin-top: 0;
+  }
+
+  .dashboard-left .top-bar {
+    padding-bottom: 0;
   }
 
   .summary-grid {
