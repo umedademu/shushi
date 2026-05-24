@@ -11,3 +11,4 @@
 - Added default time values: first record starts at 10:00, and end time starts at the current time.
 - Rebuilt store and machine options from halldata, expanding them to 353 stores and 336 machines.
 - Changed store and machine entry to searchable selection sheets for mobile use.
+- Added favorite stores and machines so marked options appear first in the selection sheets.

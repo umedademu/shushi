@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Search, Star, Trash2, X } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import "./App.css";
 import { machineOptions, storeOptions } from "./data/catalog";
@@ -32,6 +32,8 @@ type ViewMode = "home" | "updates";
 type OptionField = "storeName" | "machineName";
 
 const storageKey = "shushi-play-records";
+const favoriteStoreKey = "shushi-favorite-stores";
+const favoriteMachineKey = "shushi-favorite-machines";
 
 const updateItems = [
   {
@@ -53,6 +55,11 @@ const updateItems = [
     date: "2026-05-24",
     title: "店舗と機種の選択画面を追加",
     body: "店舗名と機種名を、スマホでも押して選べる検索付きの選択画面に変更しました。",
+  },
+  {
+    date: "2026-05-24",
+    title: "お気に入り候補を追加",
+    body: "店舗名と機種名にお気に入りを付けて、選択画面の上に出せるようにしました。",
   },
 ];
 
@@ -108,6 +115,26 @@ function loadRecords(): PlayRecord[] {
 
 function saveRecords(records: PlayRecord[]) {
   window.localStorage.setItem(storageKey, JSON.stringify(records));
+}
+
+function loadStringList(key: string): string[] {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.map((value) => String(value).trim()).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStringList(key: string, values: string[]) {
+  window.localStorage.setItem(key, JSON.stringify(values));
 }
 
 function createForm(date: string, isFirstRecordForDay = false): RecordForm {
@@ -195,6 +222,8 @@ export function App() {
   const [viewMode, setViewMode] = useState<ViewMode>("home");
   const [selectorField, setSelectorField] = useState<OptionField | null>(null);
   const [selectorQuery, setSelectorQuery] = useState("");
+  const [favoriteStores, setFavoriteStores] = useState<string[]>(() => loadStringList(favoriteStoreKey));
+  const [favoriteMachines, setFavoriteMachines] = useState<string[]>(() => loadStringList(favoriteMachineKey));
 
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
 
@@ -227,18 +256,46 @@ export function App() {
     }
 
     const options = selectorField === "storeName" ? storeOptions : machineOptions;
+    const favorites = selectorField === "storeName" ? favoriteStores : favoriteMachines;
+    const favoriteRank = new Map(favorites.map((option, index) => [option, index]));
     const query = normalizeOptionText(selectorQuery);
     const matches = query
       ? options.filter((option) => normalizeOptionText(option).includes(query))
       : options;
 
-    return matches.slice(0, 80);
-  }, [selectorField, selectorQuery]);
+    return [...matches]
+      .sort((left, right) => {
+        const leftRank = favoriteRank.get(left);
+        const rightRank = favoriteRank.get(right);
+        const leftFavorite = leftRank !== undefined;
+        const rightFavorite = rightRank !== undefined;
+
+        if (leftFavorite && rightFavorite) {
+          return leftRank - rightRank;
+        }
+
+        if (!leftFavorite && !rightFavorite) {
+          return 0;
+        }
+
+        return leftFavorite ? -1 : 1;
+      })
+      .slice(0, 80);
+  }, [favoriteMachines, favoriteStores, selectorField, selectorQuery]);
   const selectorTitle =
     selectorField === "storeName" ? "店舗を選択" : selectorField === "machineName" ? "機種を選択" : "";
   const selectorCount =
     selectorField === "storeName" ? storeOptions.length : selectorField === "machineName" ? machineOptions.length : 0;
   const selectedOption = selectorField ? form[selectorField] : "";
+  const favoriteOptionSet = useMemo(() => {
+    if (selectorField === "storeName") {
+      return new Set(favoriteStores);
+    }
+    if (selectorField === "machineName") {
+      return new Set(favoriteMachines);
+    }
+    return new Set<string>();
+  }, [favoriteMachines, favoriteStores, selectorField]);
   const canSave = Boolean(form.storeName && form.machineName);
 
   function moveMonth(amount: number) {
@@ -274,6 +331,30 @@ export function App() {
 
     updateForm(selectorField, value);
     closeOptionSelector();
+  }
+
+  function updateFavoriteList(current: string[], value: string) {
+    return current.includes(value)
+      ? current.filter((item) => item !== value)
+      : [value, ...current];
+  }
+
+  function toggleFavorite(value: string) {
+    if (selectorField === "storeName") {
+      setFavoriteStores((current) => {
+        const next = updateFavoriteList(current, value);
+        saveStringList(favoriteStoreKey, next);
+        return next;
+      });
+    }
+
+    if (selectorField === "machineName") {
+      setFavoriteMachines((current) => {
+        const next = updateFavoriteList(current, value);
+        saveStringList(favoriteMachineKey, next);
+        return next;
+      });
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -656,17 +737,31 @@ export function App() {
                     ) : (
                       filteredOptions.map((option) => {
                         const isSelected = option === selectedOption;
+                        const isFavorite = favoriteOptionSet.has(option);
 
                         return (
-                          <button
+                          <div
                             className={`option-row ${isSelected ? "is-selected" : ""}`}
                             key={option}
-                            type="button"
-                            onClick={() => selectOption(option)}
                           >
-                            <span>{option}</span>
-                            {isSelected && <Check size={18} />}
-                          </button>
+                            <button
+                              className={`favorite-button ${isFavorite ? "is-active" : ""}`}
+                              type="button"
+                              onClick={() => toggleFavorite(option)}
+                              title={isFavorite ? "お気に入りから外す" : "お気に入りに追加"}
+                              aria-label={`${option}を${isFavorite ? "お気に入りから外す" : "お気に入りに追加"}`}
+                            >
+                              <Star size={18} />
+                            </button>
+                            <button
+                              className="option-pick"
+                              type="button"
+                              onClick={() => selectOption(option)}
+                            >
+                              <span>{option}</span>
+                              {isSelected && <Check size={18} />}
+                            </button>
+                          </div>
                         );
                       })
                     )}

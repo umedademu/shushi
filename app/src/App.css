@@ -535,12 +535,49 @@ h3 {
   color: #1a2724;
   display: flex;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 4px;
+  padding: 4px;
   text-align: left;
 }
 
-.option-row span {
+.favorite-button,
+.option-pick {
+  align-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.favorite-button {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  color: #85928e;
+}
+
+.favorite-button.is-active {
+  background: #fff5dc;
+  color: #b06f00;
+}
+
+.favorite-button.is-active svg {
+  fill: currentColor;
+}
+
+.option-pick {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  gap: 10px;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.option-pick span {
+  flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }

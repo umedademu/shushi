@@ -18,6 +18,7 @@ Implemented draft behavior:
 - Set end time to the current time when opening the entry form.
 - Replace free input for stores and machines with a searchable selection sheet for mobile use.
 - Refresh selectable data from halldata to 353 stores and 336 machines.
+- Add favorites for stores and machines, saved in the browser and shown first in the selection sheets.
 
 ## Saved Fields
 
