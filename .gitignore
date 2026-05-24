@@ -38,3 +38,6 @@ coverage/
 .env.*
 *.pem
 *.key
+
+# Local exports
+precord_data.csv
