@@ -42,7 +42,7 @@ Implemented draft behavior:
 - Use the top-right edit icon as the only entry point for adding a play record.
 - Remove the duplicated selected-day add card and tighten the desktop layout.
 - Show the desktop view as a wider single column.
-- Show daily calendar profit in plain yen units instead of k units.
+- Show daily calendar profit in plain yen units with comma separators instead of k units.
 - Show selected-day details in the order: summary, play record cards, then profit chart.
 - Show positive profit and positive saved-ball changes in blue, while keeping selected calendar day values readable.
 

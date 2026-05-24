@@ -201,6 +201,11 @@ const updateItems = [
     title: "店舗別と機種別を横棒に変更",
     body: "店舗別と機種別の収支グラフを横棒表示にし、店舗名や機種名の右側で収支と期待値を比較できるようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "カレンダー収支をカンマ区切りに変更",
+    body: "カレンダーの日別収支を、+60,240 のようにカンマ付きで表示するようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -254,7 +259,7 @@ function signedCurrency(value: number) {
 function signedPlainAmount(value: number) {
   const rounded = Math.round(value);
   const sign = rounded > 0 ? "+" : "";
-  return `${sign}${rounded}`;
+  return `${sign}${rounded.toLocaleString("ja-JP")}`;
 }
 
 function loadRecords(): PlayRecord[] {
