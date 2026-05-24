@@ -35,9 +35,10 @@ Implemented draft behavior:
 - Show profit charts by month, year, lifetime, store, and machine.
 - Show saved-ball change as "貯玉増減", and show slot saved counts with the medal unit.
 - Show the profit chart as a line chart instead of a bar chart.
-- Show store and machine profit charts as vertical bar charts.
+- Show store and machine profit charts as horizontal bar lists.
 - Show expected value together with profit in the charts.
-- Show expected value as a second line in line charts and as adjacent bars in store and machine charts.
+- Show expected value as a second line in line charts and as a second bar in store and machine rows.
+- Show expected values with plus/minus signs and amount colors.
 - Use the top-right edit icon as the only entry point for adding a play record.
 - Remove the duplicated selected-day add card and tighten the desktop layout.
 - Show the desktop view as a wider single column.
@@ -76,10 +77,10 @@ The home screen includes a line-style profit chart with five views:
 - Monthly view: cumulative daily profit for the displayed month.
 - Yearly view: cumulative monthly profit for the displayed year.
 - Lifetime view: cumulative yearly profit across all records.
-- Store view: profit grouped by store in a vertical bar chart.
-- Machine view: profit grouped by machine in a vertical bar chart.
+- Store view: profit grouped by store in a horizontal bar list.
+- Machine view: profit grouped by machine in a horizontal bar list.
 
-Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show expected value as a neighboring bar.
+Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right.
 
 ## Rate Settings
 

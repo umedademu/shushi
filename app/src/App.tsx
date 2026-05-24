@@ -1,5 +1,5 @@
 import { Check, ChevronLeft, ChevronRight, Download, Pencil, Plus, Search, Star, Trash2, Upload, X } from "lucide-react";
-import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, CSSProperties, FormEvent, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { machineOptions, storeOptions } from "./data/catalog";
 
@@ -195,6 +195,11 @@ const updateItems = [
     date: "2026-05-24",
     title: "収支グラフに期待値を追加",
     body: "収支グラフに期待値も重ねて表示し、折れ線では別色の線、縦棒では隣の棒で比較できるようにしました。",
+  },
+  {
+    date: "2026-05-24",
+    title: "店舗別と機種別を横棒に変更",
+    body: "店舗別と機種別の収支グラフを横棒表示にし、店舗名や機種名の右側で収支と期待値を比較できるようにしました。",
   },
 ];
 
@@ -577,6 +582,28 @@ function chartDisplayValue(point: ChartPlotPoint | null | undefined, isTrend: bo
 
 function chartPointPath(points: Array<ChartPlotPoint & { x: number; y: number }>) {
   return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+}
+
+function horizontalPosition(value: number, minValue: number, maxValue: number) {
+  const range = maxValue - minValue || 1;
+  return Math.min(100, Math.max(0, ((value - minValue) / range) * 100));
+}
+
+function horizontalBarStyle(value: number, minValue: number, maxValue: number): CSSProperties {
+  const zero = horizontalPosition(0, minValue, maxValue);
+  const end = horizontalPosition(value, minValue, maxValue);
+  const width = value === 0 ? 1 : Math.max(1.5, Math.abs(end - zero));
+
+  return {
+    left: `${Math.min(zero, end)}%`,
+    width: `${width}%`,
+  };
+}
+
+function horizontalZeroStyle(minValue: number, maxValue: number): CSSProperties {
+  return {
+    left: `${horizontalPosition(0, minValue, maxValue)}%`,
+  };
 }
 
 function monthDays(date: Date) {
@@ -1054,6 +1081,9 @@ export function App() {
     const rangePadding = rawMin === rawMax ? 1000 : (rawMax - rawMin) * 0.12;
     const plotMin = rawMin - rangePadding;
     const plotMax = rawMax + rangePadding;
+    const barValues = linePoints.flatMap((point) => [point.value, point.expectedValue]);
+    const barMin = Math.min(0, ...barValues);
+    const barMax = Math.max(0, ...barValues);
     const highlightSource = isTrend ? linePoints.filter((point) => point.count > 0) : linePoints;
     const best = highlightSource.reduce<ChartPlotPoint | null>(
       (current, point) =>
@@ -1072,6 +1102,8 @@ export function App() {
 
     return {
       activePoints,
+      barMax,
+      barMin,
       best,
       count,
       expectedTotal,
@@ -1698,7 +1730,9 @@ export function App() {
           </div>
           <div>
             <span>期待値</span>
-            <strong>{currency(selectedExpected)}</strong>
+            <strong className={classForAmount(selectedExpected)}>
+              {signedCurrency(selectedExpected)}
+            </strong>
           </div>
           <div>
             <span>貯玉増減</span>
@@ -1744,11 +1778,17 @@ export function App() {
           <div className="chart-legend" aria-label="グラフの凡例">
             <span>
               <i className="chart-legend-mark chart-legend-profit" />
-              収支 {signedCurrency(chartData.total)}
+              収支
+              <strong className={classForAmount(chartData.total)}>
+                {signedCurrency(chartData.total)}
+              </strong>
             </span>
             <span>
               <i className="chart-legend-mark chart-legend-expected" />
-              期待値 {signedCurrency(chartData.expectedTotal)}
+              期待値
+              <strong className={classForAmount(chartData.expectedTotal)}>
+                {signedCurrency(chartData.expectedTotal)}
+              </strong>
             </span>
           </div>
 
@@ -1775,42 +1815,42 @@ export function App() {
                 </div>
               </div>
 
-              <div className={chartData.isTrend ? "chart-line-wrap" : "chart-bar-wrap"}>
-                <svg
-                  aria-label={`${chartData.title}の${chartData.isTrend ? "折れ線" : "縦棒"}グラフ`}
-                  className={chartData.isTrend ? "chart-line" : "chart-bars"}
-                  role="img"
-                  viewBox={`0 0 ${chartSvgWidth} ${chartSvgHeight}`}
-                >
-                  <line
-                    className="chart-grid-line"
-                    x1={chartPadding.left}
-                    x2={chartSvgWidth - chartPadding.right}
-                    y1={chartPadding.top}
-                    y2={chartPadding.top}
-                  />
-                  <line
-                    className="chart-grid-line chart-grid-line-bottom"
-                    x1={chartPadding.left}
-                    x2={chartSvgWidth - chartPadding.right}
-                    y1={chartSvgHeight - chartPadding.bottom}
-                    y2={chartSvgHeight - chartPadding.bottom}
-                  />
-                  <line
-                    className="chart-zero-line"
-                    x1={chartPadding.left}
-                    x2={chartSvgWidth - chartPadding.right}
-                    y1={chartGeometry.zeroY}
-                    y2={chartGeometry.zeroY}
-                  />
-                  <text className="chart-y-label" x={4} y={chartPadding.top + 4}>
-                    {signedCurrency(Math.round(chartData.plotMax))}
-                  </text>
-                  <text className="chart-y-label" x={4} y={chartSvgHeight - chartPadding.bottom + 4}>
-                    {signedCurrency(Math.round(chartData.plotMin))}
-                  </text>
-                  {chartData.isTrend ? (
-                    <>
+              {chartData.isTrend ? (
+                <>
+                  <div className="chart-line-wrap">
+                    <svg
+                      aria-label={`${chartData.title}の折れ線グラフ`}
+                      className="chart-line"
+                      role="img"
+                      viewBox={`0 0 ${chartSvgWidth} ${chartSvgHeight}`}
+                    >
+                      <line
+                        className="chart-grid-line"
+                        x1={chartPadding.left}
+                        x2={chartSvgWidth - chartPadding.right}
+                        y1={chartPadding.top}
+                        y2={chartPadding.top}
+                      />
+                      <line
+                        className="chart-grid-line chart-grid-line-bottom"
+                        x1={chartPadding.left}
+                        x2={chartSvgWidth - chartPadding.right}
+                        y1={chartSvgHeight - chartPadding.bottom}
+                        y2={chartSvgHeight - chartPadding.bottom}
+                      />
+                      <line
+                        className="chart-zero-line"
+                        x1={chartPadding.left}
+                        x2={chartSvgWidth - chartPadding.right}
+                        y1={chartGeometry.zeroY}
+                        y2={chartGeometry.zeroY}
+                      />
+                      <text className="chart-y-label" x={4} y={chartPadding.top + 4}>
+                        {signedCurrency(Math.round(chartData.plotMax))}
+                      </text>
+                      <text className="chart-y-label" x={4} y={chartSvgHeight - chartPadding.bottom + 4}>
+                        {signedCurrency(Math.round(chartData.plotMin))}
+                      </text>
                       {chartGeometry.areaPath && (
                         <path className="chart-line-area" d={chartGeometry.areaPath} />
                       )}
@@ -1844,61 +1884,81 @@ export function App() {
                           </circle>
                         </g>
                       ))}
-                    </>
-                  ) : (
-                    chartGeometry.barCoordinates.map((point) => (
-                      <g key={point.key}>
-                        <rect
-                          className={`chart-bar-column ${classForAmount(point.value)}`}
-                          height={point.barHeight}
-                          rx={4}
-                          width={point.barWidth}
-                          x={point.barX}
-                          y={point.barY}
-                        >
-                          <title>
-                            {point.label} 収支 {signedCurrency(point.value)}
-                          </title>
-                        </rect>
-                        <rect
-                          className="chart-expected-bar-column"
-                          height={point.expectedBarHeight}
-                          rx={4}
-                          width={point.barWidth}
-                          x={point.expectedBarX}
-                          y={point.expectedBarY}
-                        >
-                          <title>
-                            {point.label} 期待値 {signedCurrency(point.expectedValue)}
-                          </title>
-                        </rect>
-                      </g>
-                    ))
-                  )}
-                </svg>
-                <div className="chart-axis-labels">
-                  <span>{chartData.linePoints[0]?.label ?? ""}</span>
-                  <span>{chartData.linePoints[chartData.linePoints.length - 1]?.label ?? ""}</span>
-                </div>
-              </div>
-
-              <div className="chart-list">
-                {chartData.points.map((point) => {
-                  return (
-                    <div className="chart-row" key={point.key}>
-                      <div className="chart-row-head">
-                        <span>{point.label}</span>
-                        <strong className={classForAmount(point.value)}>
-                          {signedCurrency(point.value)}
-                        </strong>
-                      </div>
-                      <small>
-                        期待値 {signedCurrency(point.expectedValue)} / {point.count}件
-                      </small>
+                    </svg>
+                    <div className="chart-axis-labels">
+                      <span>{chartData.linePoints[0]?.label ?? ""}</span>
+                      <span>{chartData.linePoints[chartData.linePoints.length - 1]?.label ?? ""}</span>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+
+                  <div className="chart-list">
+                    {chartData.points.map((point) => {
+                      return (
+                        <div className="chart-row" key={point.key}>
+                          <div className="chart-row-head">
+                            <span>{point.label}</span>
+                            <strong className={classForAmount(point.value)}>
+                              {signedCurrency(point.value)}
+                            </strong>
+                          </div>
+                          <small>
+                            期待値
+                            <strong className={classForAmount(point.expectedValue)}>
+                              {signedCurrency(point.expectedValue)}
+                            </strong>
+                            / {point.count}件
+                          </small>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="chart-horizontal-list" aria-label={`${chartData.title}の横棒グラフ`}>
+                  {chartData.points.map((point) => (
+                    <div className="chart-horizontal-row" key={point.key}>
+                      <div className="chart-horizontal-label">
+                        <strong>{point.label}</strong>
+                        <span>{point.count}件</span>
+                      </div>
+                      <div className="chart-horizontal-bars">
+                        <div className="chart-horizontal-meter">
+                          <span
+                            className="chart-horizontal-zero"
+                            style={horizontalZeroStyle(chartData.barMin, chartData.barMax)}
+                          />
+                          <span
+                            className={`chart-horizontal-fill chart-profit-fill ${classForAmount(point.value)}`}
+                            style={horizontalBarStyle(point.value, chartData.barMin, chartData.barMax)}
+                          />
+                          <span className="chart-horizontal-value">
+                            <span>収支</span>
+                            <strong className={classForAmount(point.value)}>
+                              {signedCurrency(point.value)}
+                            </strong>
+                          </span>
+                        </div>
+                        <div className="chart-horizontal-meter">
+                          <span
+                            className="chart-horizontal-zero"
+                            style={horizontalZeroStyle(chartData.barMin, chartData.barMax)}
+                          />
+                          <span
+                            className={`chart-horizontal-fill chart-expected-fill ${classForAmount(point.expectedValue)}`}
+                            style={horizontalBarStyle(point.expectedValue, chartData.barMin, chartData.barMax)}
+                          />
+                          <span className="chart-horizontal-value">
+                            <span>期待値</span>
+                            <strong className={classForAmount(point.expectedValue)}>
+                              {signedCurrency(point.expectedValue)}
+                            </strong>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </section>
@@ -1988,7 +2048,9 @@ export function App() {
                   </div>
                   <div>
                     <dt>期待値</dt>
-                    <dd>{currency(record.expectedValue)}</dd>
+                    <dd className={classForAmount(record.expectedValue)}>
+                      {signedCurrency(record.expectedValue)}
+                    </dd>
                   </div>
                 </dl>
                 {record.note && <p className="record-note">{record.note}</p>}

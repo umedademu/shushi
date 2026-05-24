@@ -36,3 +36,4 @@
 - Changed selected-day display order to summary, play record cards, then profit chart.
 - Changed positive profit and positive saved-ball change displays to blue and improved selected calendar day readability.
 - Added expected value to profit charts: line charts show a second line, and store or machine charts show adjacent bars.
+- Changed expected value displays to use plus/minus signs and amount colors, and changed store or machine charts to horizontal bar rows.

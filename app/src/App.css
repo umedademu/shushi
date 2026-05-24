@@ -365,6 +365,10 @@ h3 {
   gap: 6px;
 }
 
+.chart-legend strong {
+  font-size: inherit;
+}
+
 .chart-legend-mark {
   flex: 0 0 auto;
   width: 10px;
@@ -572,6 +576,130 @@ h3 {
 
 .chart-row small {
   margin-top: 4px;
+}
+
+.chart-row small strong {
+  margin: 0 4px;
+}
+
+.chart-horizontal-list {
+  display: grid;
+  gap: 10px;
+  max-height: 540px;
+  margin-top: 12px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.chart-horizontal-row {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.34fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e0e8e5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.chart-horizontal-label {
+  min-width: 0;
+}
+
+.chart-horizontal-label strong {
+  display: block;
+  color: #263632;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.chart-horizontal-label span {
+  display: block;
+  margin-top: 4px;
+  color: #72807c;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.chart-horizontal-bars {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chart-horizontal-meter {
+  position: relative;
+  min-height: 30px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #edf4f1;
+}
+
+.chart-horizontal-zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(87, 102, 98, 0.28);
+  transform: translateX(-0.5px);
+}
+
+.chart-horizontal-fill {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  min-width: 2px;
+  border-radius: 5px;
+  background: #1c67be;
+}
+
+.chart-horizontal-fill.amount-negative {
+  background: #c64232;
+}
+
+.chart-horizontal-fill.amount-even {
+  background: #9aa7a3;
+}
+
+.chart-horizontal-fill.chart-expected-fill {
+  background: #b7791f;
+}
+
+.chart-horizontal-fill.chart-expected-fill.amount-negative {
+  background: #b46a35;
+}
+
+.chart-horizontal-fill.chart-expected-fill.amount-even {
+  background: #c9bda8;
+}
+
+.chart-horizontal-value {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.chart-horizontal-value span {
+  flex: 0 0 auto;
+  color: #52615d;
+}
+
+.chart-horizontal-value strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-size: 12px;
 }
 
 .csv-panel {
