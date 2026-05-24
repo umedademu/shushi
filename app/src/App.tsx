@@ -127,6 +127,11 @@ const updateItems = [
     title: "稼働記録の編集を追加",
     body: "日別の記録カード全体を押して、保存済みの稼働記録を編集できるようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "pRecordの貯玉取り込みを改善",
+    body: "pRecordのCSVから貯玉稼働を取り込む時に、投資額・回収額・収支・貯玉から貯玉投資と貯玉回収を推定するようにしました。",
+  },
 ];
 
 function pad(value: number) {
@@ -325,12 +330,42 @@ function toNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function profit(record: Pick<PlayRecord, "investment" | "recovery">) {
-  return record.recovery - record.investment;
-}
-
 function savedProfit(record: Pick<PlayRecord, "savedInvestment" | "savedRecovery">) {
   return (record.savedRecovery ?? 0) - (record.savedInvestment ?? 0);
+}
+
+function savedUnitValue(
+  record: Pick<PlayRecord, "rateExchangeCountPer100Yen" | "rateUnitPrice">,
+) {
+  if (record.rateExchangeCountPer100Yen && record.rateExchangeCountPer100Yen > 0) {
+    return 100 / record.rateExchangeCountPer100Yen;
+  }
+
+  return record.rateUnitPrice && record.rateUnitPrice > 0 ? record.rateUnitPrice : 0;
+}
+
+function rateUnitValue(rate: Pick<RateOption, "exchangeCountPer100Yen" | "unitPrice">) {
+  if (rate.exchangeCountPer100Yen > 0) {
+    return 100 / rate.exchangeCountPer100Yen;
+  }
+
+  return rate.unitPrice;
+}
+
+function profit(
+  record: Pick<
+    PlayRecord,
+    | "investment"
+    | "recovery"
+    | "savedInvestment"
+    | "savedRecovery"
+    | "rateExchangeCountPer100Yen"
+    | "rateUnitPrice"
+  >,
+) {
+  const cashProfit = record.recovery - record.investment;
+  const savedValue = savedProfit(record) * savedUnitValue(record);
+  return Math.round(cashProfit + savedValue);
 }
 
 function savedCount(value: number) {
@@ -610,6 +645,58 @@ function parseRateKind(value: string): RateKind | undefined {
   return undefined;
 }
 
+function roundSavedCount(value: number) {
+  const rounded = Math.round(value);
+  if (Math.abs(value - rounded) < 0.01) {
+    return rounded;
+  }
+
+  return Number(value.toFixed(2));
+}
+
+function formatRateValue(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function inferPRecordRateValue(profitValue: number, savedDifference: number) {
+  if (!savedDifference || !profitValue) {
+    return null;
+  }
+
+  const rateValue = profitValue / savedDifference;
+  if (!Number.isFinite(rateValue) || rateValue <= 0 || rateValue > 30) {
+    return null;
+  }
+
+  const estimatedProfit = savedDifference * rateValue;
+  if (Math.abs(estimatedProfit - profitValue) > 1) {
+    return null;
+  }
+
+  return Number(rateValue.toFixed(6));
+}
+
+function pRecordRateName(rateValue: number) {
+  if (Math.abs(rateValue - 20) < 0.05) {
+    return "20スロ推定";
+  }
+  if (Math.abs(rateValue - 5) < 0.05) {
+    return "5スロ推定";
+  }
+  if (Math.abs(rateValue - 4) < 0.05) {
+    return "4パチ推定";
+  }
+  if (Math.abs(rateValue - 1) < 0.05) {
+    return "1パチ推定";
+  }
+
+  return `${formatRateValue(rateValue)}円換算`;
+}
+
+function pRecordRateKind(rateValue: number): RateKind {
+  return rateValue >= 5 ? "slot" : "pachinko";
+}
+
 function parseRecordsFromCsv(text: string) {
   const rows = parseCsvRows(text);
   if (rows.length < 2) {
@@ -635,13 +722,27 @@ function parseRecordsFromCsv(text: string) {
     const endTime =
       normalizeTimeValue(rowValue(row, headerIndex, ["終了時刻", "endTime"])) ||
       endTimeFromDuration(startTime, rowValue(row, headerIndex, ["稼働時間"]));
+    const csvInvestment = toNumber(rowValue(row, headerIndex, ["投資額"]));
+    const csvRecovery = toNumber(rowValue(row, headerIndex, ["回収額"]));
+    const csvProfit = toNumber(rowValue(row, headerIndex, ["収支"]));
     const pRecordSaved = toNumber(rowValue(row, headerIndex, ["貯玉"]));
-    const savedInvestment =
-      toNumber(rowValue(row, headerIndex, ["貯玉投資", "savedInvestment"])) || (pRecordSaved < 0 ? Math.abs(pRecordSaved) : 0);
-    const savedRecovery =
-      toNumber(rowValue(row, headerIndex, ["貯玉回収", "savedRecovery"])) || (pRecordSaved > 0 ? pRecordSaved : 0);
-    const rateKind = parseRateKind(rowValue(row, headerIndex, ["レート区分", "rateKind"]));
-    const rateName = rowValue(row, headerIndex, ["レート", "rateName"]);
+    const pRecordRateValue = inferPRecordRateValue(csvProfit, pRecordSaved);
+    const importedSavedInvestment = toNumber(rowValue(row, headerIndex, ["貯玉投資", "savedInvestment"]));
+    const importedSavedRecovery = toNumber(rowValue(row, headerIndex, ["貯玉回収", "savedRecovery"]));
+    const savedInvestment = pRecordRateValue
+      ? roundSavedCount(csvInvestment / pRecordRateValue)
+      : importedSavedInvestment || (pRecordSaved < 0 ? Math.abs(pRecordSaved) : 0);
+    const savedRecovery = pRecordRateValue
+      ? roundSavedCount(csvRecovery / pRecordRateValue)
+      : importedSavedRecovery || (pRecordSaved > 0 ? pRecordSaved : 0);
+    const rateKind =
+      parseRateKind(rowValue(row, headerIndex, ["レート区分", "rateKind"])) ??
+      (pRecordRateValue ? pRecordRateKind(pRecordRateValue) : undefined);
+    const rateName = rowValue(row, headerIndex, ["レート", "rateName"]) || (pRecordRateValue ? pRecordRateName(pRecordRateValue) : "");
+    const rateUnitPrice = toNumber(rowValue(row, headerIndex, ["貸玉", "rateUnitPrice"])) || pRecordRateValue || undefined;
+    const rateExchangeCountPer100Yen =
+      toNumber(rowValue(row, headerIndex, ["交換率", "rateExchangeCountPer100Yen"])) ||
+      (pRecordRateValue ? 100 / pRecordRateValue : undefined);
 
     importedRecords.push({
       id: crypto.randomUUID(),
@@ -652,12 +753,12 @@ function parseRecordsFromCsv(text: string) {
       machineName,
       rateName,
       rateKind,
-      rateUnitPrice: toNumber(rowValue(row, headerIndex, ["貸玉", "rateUnitPrice"])) || undefined,
-      rateExchangeCountPer100Yen: toNumber(rowValue(row, headerIndex, ["交換率", "rateExchangeCountPer100Yen"])) || undefined,
+      rateUnitPrice,
+      rateExchangeCountPer100Yen,
       rateSavedCount: toNumber(rowValue(row, headerIndex, ["保存時貯玉", "rateSavedCount"])) || undefined,
       rateReplayFeePercent: toNumber(rowValue(row, headerIndex, ["再プレイ手数料率", "rateReplayFeePercent"])) || undefined,
-      investment: toNumber(rowValue(row, headerIndex, ["現金投資", "投資額", "investment"])),
-      recovery: toNumber(rowValue(row, headerIndex, ["現金回収", "回収額", "recovery"])),
+      investment: pRecordRateValue ? 0 : toNumber(rowValue(row, headerIndex, ["現金投資", "投資額", "investment"])),
+      recovery: pRecordRateValue ? 0 : toNumber(rowValue(row, headerIndex, ["現金回収", "回収額", "recovery"])),
       savedInvestment,
       savedRecovery,
       expectedValue: toNumber(rowValue(row, headerIndex, ["期待値", "expectedValue"])),
@@ -779,7 +880,10 @@ export function App() {
     [editingRecordId, records],
   );
   const canSave = Boolean(form.storeName && form.machineName && (selectedRate || editingRecord));
+  const formCashProfit = toNumber(form.recovery) - toNumber(form.investment);
   const formSavedDifference = toNumber(form.savedRecovery) - toNumber(form.savedInvestment);
+  const formSavedUnitValue = selectedRate ? rateUnitValue(selectedRate) : editingRecord ? savedUnitValue(editingRecord) : 0;
+  const formTotalProfit = Math.round(formCashProfit + formSavedDifference * formSavedUnitValue);
   const selectedRateSavedBefore =
     selectedRate && editingRecord?.rateId === selectedRate.id
       ? selectedRate.savedCount - savedProfit(editingRecord)
@@ -1540,14 +1644,20 @@ export function App() {
               <div className="live-result result-stack">
                 <div>
                   <span>現金収支</span>
-                  <strong className={classForAmount(toNumber(form.recovery) - toNumber(form.investment))}>
-                    {signedCurrency(toNumber(form.recovery) - toNumber(form.investment))}
+                  <strong className={classForAmount(formCashProfit)}>
+                    {signedCurrency(formCashProfit)}
                   </strong>
                 </div>
                 <div>
                   <span>貯玉差引</span>
                   <strong className={classForAmount(formSavedDifference)}>
                     {savedCount(formSavedDifference)}
+                  </strong>
+                </div>
+                <div>
+                  <span>総合収支</span>
+                  <strong className={classForAmount(formTotalProfit)}>
+                    {signedCurrency(formTotalProfit)}
                   </strong>
                 </div>
                 {selectedRateSavedAfter !== null && (

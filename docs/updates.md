@@ -24,3 +24,5 @@
 - Added CSV import and export for play records, including pRecord CSV import support.
 - Added editing for saved play records by selecting a daily record card.
 - Made saved-ball balances adjust by the difference between the old and updated play record.
+- Improved pRecord CSV import so saved-ball play can be restored from investment, recovery, profit, and saved-ball difference.
+- Added total profit display to the entry form so saved-ball value is included in the yen result.
