@@ -179,6 +179,11 @@ const updateItems = [
     title: "PC表示を幅広の1列に変更",
     body: "PC表示でも縦1列にし、カレンダーの日別収支はk表記ではなく円単位の数字で表示するようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "日別表示の順番を変更",
+    body: "カレンダー下の表示を、日別集計、稼働カード、収支グラフの順に並ぶようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [

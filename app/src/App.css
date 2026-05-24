@@ -48,6 +48,31 @@ button {
   min-width: 0;
 }
 
+.dashboard-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-grid {
+  order: 1;
+}
+
+.record-list {
+  order: 2;
+}
+
+.chart-panel {
+  order: 3;
+}
+
+.csv-panel {
+  order: 4;
+}
+
+.updates-button {
+  order: 5;
+}
+
 h1,
 h2,
 h3,
