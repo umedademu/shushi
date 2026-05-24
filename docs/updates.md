@@ -28,3 +28,4 @@
 - Added total profit display to the entry form so saved-ball value is included in the yen result.
 - Changed CSV import so dates included in the CSV replace existing records for those same dates.
 - Added profit charts with monthly, yearly, lifetime, store, and machine views.
+- Renamed the saved-ball difference display to "貯玉増減" and showed slot saved counts with the medal unit.

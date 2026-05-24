@@ -150,6 +150,11 @@ const updateItems = [
     title: "収支グラフを追加",
     body: "月別、年別、生涯収支、店舗別、機種別に切り替えられる収支グラフを追加しました。",
   },
+  {
+    date: "2026-05-24",
+    title: "貯玉増減の表示を調整",
+    body: "貯玉の差し引き表示を貯玉増減に変更し、スロットの貯玉数は枚で表示するようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -394,13 +399,36 @@ function profit(
   return Math.round(cashProfit + savedValue);
 }
 
-function savedCount(value: number) {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toLocaleString("ja-JP")}玉`;
+function savedUnitLabel(kind?: RateKind | "mixed" | null) {
+  if (kind === "slot") {
+    return "枚";
+  }
+  if (kind === "mixed") {
+    return "玉/枚";
+  }
+  return "玉";
 }
 
-function plainSavedCount(value: number) {
-  return `${value.toLocaleString("ja-JP")}玉`;
+function savedCount(value: number, kind?: RateKind | "mixed" | null) {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toLocaleString("ja-JP")}${savedUnitLabel(kind)}`;
+}
+
+function plainSavedCount(value: number, kind?: RateKind | "mixed" | null) {
+  return `${value.toLocaleString("ja-JP")}${savedUnitLabel(kind)}`;
+}
+
+function recordsSavedUnitKind(records: PlayRecord[]): RateKind | "mixed" | undefined {
+  const kinds = Array.from(
+    new Set(records.map((record) => record.rateKind).filter((kind): kind is RateKind => Boolean(kind))),
+  );
+  if (kinds.length === 1) {
+    return kinds[0];
+  }
+  if (kinds.length > 1) {
+    return "mixed";
+  }
+  return undefined;
 }
 
 function durationHours(startTime: string, endTime: string) {
@@ -532,12 +560,12 @@ function rateSavedLabel() {
   return "貯玉";
 }
 
-function rateSavedUnitLabel() {
-  return "玉";
+function rateSavedUnitLabel(kind?: RateKind) {
+  return savedUnitLabel(kind);
 }
 
-function rateSavedText(rate: Pick<RateOption, "savedCount">) {
-  return `${rateSavedLabel()} ${rate.savedCount.toLocaleString("ja-JP")}${rateSavedUnitLabel()}`;
+function rateSavedText(rate: Pick<RateOption, "kind" | "savedCount">) {
+  return `${rateSavedLabel()} ${rate.savedCount.toLocaleString("ja-JP")}${rateSavedUnitLabel(rate.kind)}`;
 }
 
 function rateSummary(
@@ -570,7 +598,7 @@ const csvHeaders = [
   "現金収支",
   "貯玉投資",
   "貯玉回収",
-  "貯玉差引",
+  "貯玉増減",
   "期待値",
   "稼働時間",
   "メモ",
@@ -911,6 +939,7 @@ export function App() {
     (total, record) => total + savedProfit(record),
     0,
   );
+  const selectedSavedUnitKind = recordsSavedUnitKind(selectedRecords);
   const monthProfit = monthRecords.reduce((total, record) => total + profit(record), 0);
   const chartData = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -1007,6 +1036,7 @@ export function App() {
     () => records.find((record) => record.id === editingRecordId) ?? null,
     [editingRecordId, records],
   );
+  const formSavedUnitKind = selectedRate?.kind ?? editingRecord?.rateKind;
   const canSave = Boolean(form.storeName && form.machineName && (selectedRate || editingRecord));
   const formCashProfit = toNumber(form.recovery) - toNumber(form.investment);
   const formSavedDifference = toNumber(form.savedRecovery) - toNumber(form.savedInvestment);
@@ -1508,9 +1538,9 @@ export function App() {
             <strong>{currency(selectedExpected)}</strong>
           </div>
           <div>
-            <span>貯玉</span>
+            <span>貯玉増減</span>
             <strong className={classForAmount(selectedSavedProfit)}>
-              {savedCount(selectedSavedProfit)}
+              {savedCount(selectedSavedProfit, selectedSavedUnitKind)}
             </strong>
           </div>
           <div>
@@ -1665,16 +1695,16 @@ export function App() {
                   </div>
                   <div>
                     <dt>貯玉投資</dt>
-                    <dd>{plainSavedCount(record.savedInvestment ?? 0)}</dd>
+                    <dd>{plainSavedCount(record.savedInvestment ?? 0, record.rateKind)}</dd>
                   </div>
                   <div>
                     <dt>貯玉回収</dt>
-                    <dd>{plainSavedCount(record.savedRecovery ?? 0)}</dd>
+                    <dd>{plainSavedCount(record.savedRecovery ?? 0, record.rateKind)}</dd>
                   </div>
                   <div>
-                    <dt>貯玉差引</dt>
+                    <dt>貯玉増減</dt>
                     <dd className={classForAmount(savedProfit(record))}>
-                      {savedCount(savedProfit(record))}
+                      {savedCount(savedProfit(record), record.rateKind)}
                     </dd>
                   </div>
                   <div>
@@ -1873,9 +1903,9 @@ export function App() {
                   </strong>
                 </div>
                 <div>
-                  <span>貯玉差引</span>
+                  <span>貯玉増減</span>
                   <strong className={classForAmount(formSavedDifference)}>
-                    {savedCount(formSavedDifference)}
+                    {savedCount(formSavedDifference, formSavedUnitKind)}
                   </strong>
                 </div>
                 <div>
@@ -1887,7 +1917,7 @@ export function App() {
                 {selectedRateSavedAfter !== null && (
                   <div>
                     <span>保存後の貯玉</span>
-                    <strong>{plainSavedCount(selectedRateSavedAfter)}</strong>
+                    <strong>{plainSavedCount(selectedRateSavedAfter, formSavedUnitKind)}</strong>
                   </div>
                 )}
               </div>
@@ -2152,7 +2182,7 @@ export function App() {
                         100円あたり {rateForm.exchangeCountPer100Yen || 0}
                         {rateExchangeUnitLabel(rateForm.kind)} / {rateSavedLabel()}{" "}
                         {Number(rateForm.savedCount || 0).toLocaleString("ja-JP")}
-                        {rateSavedUnitLabel()} / 再プレイ {rateForm.replayFeePercent || 0}%
+                        {rateSavedUnitLabel(rateForm.kind)} / 再プレイ {rateForm.replayFeePercent || 0}%
                       </p>
                     </div>
 

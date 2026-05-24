@@ -33,6 +33,7 @@ Implemented draft behavior:
 - Estimate saved-ball investment and recovery from pRecord CSV rows when profit and saved-ball difference can determine a rate value.
 - Replace existing records for dates that are included in an imported CSV.
 - Show profit charts by month, year, lifetime, store, and machine.
+- Show saved-ball change as "貯玉増減", and show slot saved counts with the medal unit.
 
 ## Saved Fields
 
@@ -56,7 +57,7 @@ Each play record currently stores:
 - Expected value
 - Memo
 
-Cash profit, saved-ball difference, total profit, and play time are calculated from the saved values. Total profit includes saved-ball difference converted by the selected or imported exchange value.
+Cash profit, saved-ball change, total profit, and play time are calculated from the saved values. Total profit includes saved-ball change converted by the selected or imported exchange value.
 
 ## Charts
 
