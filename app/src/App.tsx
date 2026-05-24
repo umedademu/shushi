@@ -19,6 +19,8 @@ type PlayRecord = {
   rateReplayFeePercent?: number;
   investment: number;
   recovery: number;
+  savedInvestment?: number;
+  savedRecovery?: number;
   expectedValue: number;
   note: string;
 };
@@ -55,6 +57,8 @@ type RecordForm = {
   rateName: string;
   investment: string;
   recovery: string;
+  savedInvestment: string;
+  savedRecovery: string;
   expectedValue: string;
   note: string;
 };
@@ -101,7 +105,12 @@ const updateItems = [
   {
     date: "2026-05-24",
     title: "レート編集と貯玉保存を追加",
-    body: "レート候補を後から編集できるようにし、貯玉や貯メダルも保存して入力時に確認できるようにしました。",
+    body: "レート候補を後から編集できるようにし、貯玉も保存して入力時に確認できるようにしました。",
+  },
+  {
+    date: "2026-05-24",
+    title: "貯玉投資と貯玉回収を追加",
+    body: "収支入力で現金とは別に、貯玉の投資数と回収数を保存できるようにしました。",
   },
 ];
 
@@ -237,6 +246,8 @@ function createForm(date: string, isFirstRecordForDay = false): RecordForm {
     rateName: "",
     investment: "",
     recovery: "",
+    savedInvestment: "",
+    savedRecovery: "",
     expectedValue: "",
     note: "",
   };
@@ -283,6 +294,19 @@ function toNumber(value: string) {
 
 function profit(record: Pick<PlayRecord, "investment" | "recovery">) {
   return record.recovery - record.investment;
+}
+
+function savedProfit(record: Pick<PlayRecord, "savedInvestment" | "savedRecovery">) {
+  return (record.savedRecovery ?? 0) - (record.savedInvestment ?? 0);
+}
+
+function savedCount(value: number) {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toLocaleString("ja-JP")}玉`;
+}
+
+function plainSavedCount(value: number) {
+  return `${value.toLocaleString("ja-JP")}玉`;
 }
 
 function durationHours(startTime: string, endTime: string) {
@@ -346,16 +370,16 @@ function rateExchangeUnitLabel(kind: RateKind) {
   return kind === "pachinko" ? "玉交換" : "枚交換";
 }
 
-function rateSavedLabel(kind: RateKind) {
-  return kind === "pachinko" ? "貯玉" : "貯メダル";
+function rateSavedLabel() {
+  return "貯玉";
 }
 
-function rateSavedUnitLabel(kind: RateKind) {
-  return kind === "pachinko" ? "玉" : "枚";
+function rateSavedUnitLabel() {
+  return "玉";
 }
 
-function rateSavedText(rate: Pick<RateOption, "kind" | "savedCount">) {
-  return `${rateSavedLabel(rate.kind)} ${rate.savedCount.toLocaleString("ja-JP")}${rateSavedUnitLabel(rate.kind)}`;
+function rateSavedText(rate: Pick<RateOption, "savedCount">) {
+  return `${rateSavedLabel()} ${rate.savedCount.toLocaleString("ja-JP")}${rateSavedUnitLabel()}`;
 }
 
 function rateSummary(
@@ -413,6 +437,10 @@ export function App() {
   );
   const selectedHours = selectedRecords.reduce(
     (total, record) => total + durationHours(record.startTime, record.endTime),
+    0,
+  );
+  const selectedSavedProfit = selectedRecords.reduce(
+    (total, record) => total + savedProfit(record),
     0,
   );
   const monthProfit = monthRecords.reduce((total, record) => total + profit(record), 0);
@@ -661,6 +689,8 @@ export function App() {
       rateReplayFeePercent: selectedRate.replayFeePercent,
       investment: toNumber(form.investment),
       recovery: toNumber(form.recovery),
+      savedInvestment: toNumber(form.savedInvestment),
+      savedRecovery: toNumber(form.savedRecovery),
       expectedValue: toNumber(form.expectedValue),
       note: form.note.trim(),
     };
@@ -799,6 +829,12 @@ export function App() {
             <strong>{currency(selectedExpected)}</strong>
           </div>
           <div>
+            <span>貯玉</span>
+            <strong className={classForAmount(selectedSavedProfit)}>
+              {savedCount(selectedSavedProfit)}
+            </strong>
+          </div>
+          <div>
             <span>時間</span>
             <strong>{selectedHours.toFixed(1)}時間</strong>
           </div>
@@ -832,12 +868,26 @@ export function App() {
                     </dd>
                   </div>
                   <div>
-                    <dt>投資</dt>
+                    <dt>現金投資</dt>
                     <dd>{currency(record.investment)}</dd>
                   </div>
                   <div>
-                    <dt>回収</dt>
+                    <dt>現金回収</dt>
                     <dd>{currency(record.recovery)}</dd>
+                  </div>
+                  <div>
+                    <dt>貯玉投資</dt>
+                    <dd>{plainSavedCount(record.savedInvestment ?? 0)}</dd>
+                  </div>
+                  <div>
+                    <dt>貯玉回収</dt>
+                    <dd>{plainSavedCount(record.savedRecovery ?? 0)}</dd>
+                  </div>
+                  <div>
+                    <dt>貯玉差引</dt>
+                    <dd className={classForAmount(savedProfit(record))}>
+                      {savedCount(savedProfit(record))}
+                    </dd>
                   </div>
                   <div>
                     <dt>期待値</dt>
@@ -955,7 +1005,7 @@ export function App() {
 
               <div className="form-pair">
                 <label>
-                  投資額
+                  現金投資額
                   <input
                     inputMode="numeric"
                     min="0"
@@ -963,11 +1013,10 @@ export function App() {
                     value={form.investment}
                     onChange={(event) => updateForm("investment", event.target.value)}
                     placeholder="0"
-                    required
                   />
                 </label>
                 <label>
-                  回収額
+                  現金回収額
                   <input
                     inputMode="numeric"
                     min="0"
@@ -975,7 +1024,31 @@ export function App() {
                     value={form.recovery}
                     onChange={(event) => updateForm("recovery", event.target.value)}
                     placeholder="0"
-                    required
+                  />
+                </label>
+              </div>
+
+              <div className="form-pair">
+                <label>
+                  貯玉投資
+                  <input
+                    inputMode="numeric"
+                    min="0"
+                    type="number"
+                    value={form.savedInvestment}
+                    onChange={(event) => updateForm("savedInvestment", event.target.value)}
+                    placeholder="0"
+                  />
+                </label>
+                <label>
+                  貯玉回収
+                  <input
+                    inputMode="numeric"
+                    min="0"
+                    type="number"
+                    value={form.savedRecovery}
+                    onChange={(event) => updateForm("savedRecovery", event.target.value)}
+                    placeholder="0"
                   />
                 </label>
               </div>
@@ -1001,11 +1074,19 @@ export function App() {
                 />
               </label>
 
-              <div className="live-result">
-                <span>収支</span>
-                <strong className={classForAmount(toNumber(form.recovery) - toNumber(form.investment))}>
-                  {signedCurrency(toNumber(form.recovery) - toNumber(form.investment))}
-                </strong>
+              <div className="live-result result-stack">
+                <div>
+                  <span>現金収支</span>
+                  <strong className={classForAmount(toNumber(form.recovery) - toNumber(form.investment))}>
+                    {signedCurrency(toNumber(form.recovery) - toNumber(form.investment))}
+                  </strong>
+                </div>
+                <div>
+                  <span>貯玉差引</span>
+                  <strong className={classForAmount(toNumber(form.savedRecovery) - toNumber(form.savedInvestment))}>
+                    {savedCount(toNumber(form.savedRecovery) - toNumber(form.savedInvestment))}
+                  </strong>
+                </div>
               </div>
 
               <button className="save-button" type="submit" disabled={!canSave}>
@@ -1236,7 +1317,7 @@ export function App() {
 
                     <div className="form-pair">
                       <label>
-                        {rateSavedLabel(rateForm.kind)}
+                        {rateSavedLabel()}
                         <input
                           inputMode="numeric"
                           min="0"
@@ -1266,9 +1347,9 @@ export function App() {
                       </strong>
                       <p>
                         100円あたり {rateForm.exchangeCountPer100Yen || 0}
-                        {rateExchangeUnitLabel(rateForm.kind)} / {rateSavedLabel(rateForm.kind)}{" "}
+                        {rateExchangeUnitLabel(rateForm.kind)} / {rateSavedLabel()}{" "}
                         {Number(rateForm.savedCount || 0).toLocaleString("ja-JP")}
-                        {rateSavedUnitLabel(rateForm.kind)} / 再プレイ {rateForm.replayFeePercent || 0}%
+                        {rateSavedUnitLabel()} / 再プレイ {rateForm.replayFeePercent || 0}%
                       </p>
                     </div>
 
