@@ -20,3 +20,5 @@
 - Added saved-ball investment and saved-ball recovery fields to the play entry form.
 - Added automatic saved-ball balance updates when saving or deleting play records.
 - Added a saved-ball balance preview to the play entry form.
+- Renamed the cash amount fields to cash investment and cash recovery.
+- Added CSV import and export for play records, including pRecord CSV import support.

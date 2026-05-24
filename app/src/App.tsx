@@ -1,5 +1,5 @@
-import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Search, Star, Trash2, X } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, Download, Pencil, Plus, Search, Star, Trash2, Upload, X } from "lucide-react";
+import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { machineOptions, storeOptions } from "./data/catalog";
 
@@ -116,6 +116,11 @@ const updateItems = [
     date: "2026-05-24",
     title: "貯玉残高の自動更新を追加",
     body: "稼働記録を保存すると、選択したレートの現在貯玉が投資と回収に合わせて増減するようにしました。",
+  },
+  {
+    date: "2026-05-24",
+    title: "CSVの取り込みと書き出しを追加",
+    body: "収支記録をCSVで出力できるようにし、pRecordから出したCSVも取り込めるようにしました。",
   },
 ];
 
@@ -400,7 +405,248 @@ function rateSummary(
   )} / ${rateSavedText(rate)} / 再プレイ${rate.replayFeePercent.toLocaleString("ja-JP")}%`;
 }
 
+const csvHeaders = [
+  "日付",
+  "開始時刻",
+  "終了時刻",
+  "店舗",
+  "機種",
+  "レート",
+  "レート区分",
+  "貸玉",
+  "交換率",
+  "保存時貯玉",
+  "再プレイ手数料率",
+  "現金投資",
+  "現金回収",
+  "現金収支",
+  "貯玉投資",
+  "貯玉回収",
+  "貯玉差引",
+  "期待値",
+  "稼働時間",
+  "メモ",
+];
+
+function escapeCsvValue(value: string | number | undefined) {
+  const text = String(value ?? "");
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function recordsToCsv(records: PlayRecord[]) {
+  const rows = records
+    .slice()
+    .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`))
+    .map((record) => [
+      record.date,
+      record.startTime,
+      record.endTime,
+      record.storeName,
+      record.machineName,
+      record.rateName ?? "",
+      record.rateKind ? rateKindLabel(record.rateKind) : "",
+      record.rateUnitPrice ?? "",
+      record.rateExchangeCountPer100Yen ?? "",
+      record.rateSavedCount ?? "",
+      record.rateReplayFeePercent ?? "",
+      record.investment,
+      record.recovery,
+      profit(record),
+      record.savedInvestment ?? 0,
+      record.savedRecovery ?? 0,
+      savedProfit(record),
+      record.expectedValue,
+      durationHours(record.startTime, record.endTime).toFixed(1),
+      record.note,
+    ]);
+
+  return `\uFEFF${[csvHeaders, ...rows].map((row) => row.map(escapeCsvValue).join(",")).join("\r\n")}`;
+}
+
+function parseCsvRows(text: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let value = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[index + 1] === '"') {
+          value += '"';
+          index += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        value += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(value);
+      value = "";
+    } else if (char === "\n") {
+      row.push(value.replace(/\r$/, ""));
+      rows.push(row);
+      row = [];
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+
+  if (value || row.length > 0) {
+    row.push(value.replace(/\r$/, ""));
+    rows.push(row);
+  }
+
+  return rows.filter((csvRow) => csvRow.some((cell) => cell.trim()));
+}
+
+function normalizeCsvHeader(value: string) {
+  return value.replace(/^\uFEFF/, "").trim();
+}
+
+function rowValue(row: string[], headerIndex: Map<string, number>, names: string[]) {
+  for (const name of names) {
+    const index = headerIndex.get(name);
+    if (index !== undefined) {
+      return String(row[index] ?? "").trim();
+    }
+  }
+  return "";
+}
+
+function normalizeDateValue(value: string) {
+  const normalized = value.trim().replace(/\//g, "-");
+  const match = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) {
+    return "";
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) {
+    return "";
+  }
+
+  return `${year}-${pad(month)}-${pad(day)}`;
+}
+
+function normalizeTimeValue(value: string) {
+  const match = value.trim().match(/^(\d{1,2}):(\d{1,2})$/);
+  if (!match) {
+    return "";
+  }
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    return "";
+  }
+
+  const roundedMinute = Math.round(minute / 5) * 5;
+  if (roundedMinute === 60) {
+    return `${pad((hour + 1) % 24)}:00`;
+  }
+
+  return `${pad(hour)}:${pad(roundedMinute)}`;
+}
+
+function endTimeFromDuration(startTime: string, hoursValue: string) {
+  const hours = toNumber(hoursValue);
+  if (!hours) {
+    return startTime;
+  }
+
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const start = startHour * 60 + startMinute;
+  const durationMinutes = Math.round((hours * 60) / 5) * 5;
+  const end = (start + durationMinutes) % (24 * 60);
+  return `${pad(Math.floor(end / 60))}:${pad(end % 60)}`;
+}
+
+function parseRateKind(value: string): RateKind | undefined {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "pachinko" || normalized === "パチンコ") {
+    return "pachinko";
+  }
+  if (normalized === "slot" || normalized === "スロット") {
+    return "slot";
+  }
+  return undefined;
+}
+
+function parseRecordsFromCsv(text: string) {
+  const rows = parseCsvRows(text);
+  if (rows.length < 2) {
+    return { importedRecords: [], skippedCount: rows.length };
+  }
+
+  const headers = rows[0].map(normalizeCsvHeader);
+  const headerIndex = new Map(headers.map((header, index) => [header, index]));
+  const importedRecords: PlayRecord[] = [];
+  let skippedCount = 0;
+
+  rows.slice(1).forEach((row) => {
+    const date = normalizeDateValue(rowValue(row, headerIndex, ["日付", "date"]));
+    const storeName = rowValue(row, headerIndex, ["店舗", "storeName"]);
+    const machineName = rowValue(row, headerIndex, ["機種", "machineName"]);
+
+    if (!date || !storeName || !machineName) {
+      skippedCount += 1;
+      return;
+    }
+
+    const startTime = normalizeTimeValue(rowValue(row, headerIndex, ["開始時刻", "startTime"])) || "10:00";
+    const endTime =
+      normalizeTimeValue(rowValue(row, headerIndex, ["終了時刻", "endTime"])) ||
+      endTimeFromDuration(startTime, rowValue(row, headerIndex, ["稼働時間"]));
+    const pRecordSaved = toNumber(rowValue(row, headerIndex, ["貯玉"]));
+    const savedInvestment =
+      toNumber(rowValue(row, headerIndex, ["貯玉投資", "savedInvestment"])) || (pRecordSaved < 0 ? Math.abs(pRecordSaved) : 0);
+    const savedRecovery =
+      toNumber(rowValue(row, headerIndex, ["貯玉回収", "savedRecovery"])) || (pRecordSaved > 0 ? pRecordSaved : 0);
+    const rateKind = parseRateKind(rowValue(row, headerIndex, ["レート区分", "rateKind"]));
+    const rateName = rowValue(row, headerIndex, ["レート", "rateName"]);
+
+    importedRecords.push({
+      id: crypto.randomUUID(),
+      date,
+      startTime,
+      endTime,
+      storeName,
+      machineName,
+      rateName,
+      rateKind,
+      rateUnitPrice: toNumber(rowValue(row, headerIndex, ["貸玉", "rateUnitPrice"])) || undefined,
+      rateExchangeCountPer100Yen: toNumber(rowValue(row, headerIndex, ["交換率", "rateExchangeCountPer100Yen"])) || undefined,
+      rateSavedCount: toNumber(rowValue(row, headerIndex, ["保存時貯玉", "rateSavedCount"])) || undefined,
+      rateReplayFeePercent: toNumber(rowValue(row, headerIndex, ["再プレイ手数料率", "rateReplayFeePercent"])) || undefined,
+      investment: toNumber(rowValue(row, headerIndex, ["現金投資", "投資額", "investment"])),
+      recovery: toNumber(rowValue(row, headerIndex, ["現金回収", "回収額", "recovery"])),
+      savedInvestment,
+      savedRecovery,
+      expectedValue: toNumber(rowValue(row, headerIndex, ["期待値", "expectedValue"])),
+      note: rowValue(row, headerIndex, ["メモ", "note"]),
+    });
+  });
+
+  return { importedRecords, skippedCount };
+}
+
 export function App() {
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -419,6 +665,7 @@ export function App() {
   const [isRateEditorOpen, setIsRateEditorOpen] = useState(false);
   const [editingRateId, setEditingRateId] = useState<string | null>(null);
   const [rateForm, setRateForm] = useState<RateForm>(() => createRateForm());
+  const [csvMessage, setCsvMessage] = useState("");
 
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
 
@@ -506,6 +753,69 @@ export function App() {
   const canSave = Boolean(form.storeName && form.machineName && selectedRate);
   const formSavedDifference = toNumber(form.savedRecovery) - toNumber(form.savedInvestment);
   const selectedRateSavedAfter = selectedRate ? selectedRate.savedCount + formSavedDifference : null;
+
+  function exportRecordsToCsv() {
+    if (records.length === 0) {
+      setCsvMessage("書き出す記録がありません。");
+      return;
+    }
+
+    const blob = new Blob([recordsToCsv(records)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `shushi-records-${todayKey()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setCsvMessage(`${records.length}件の記録を書き出しました。`);
+  }
+
+  async function readCsvFile(file: File) {
+    const buffer = await file.arrayBuffer();
+    const utf8Text = new TextDecoder("utf-8").decode(buffer);
+    if (!utf8Text.includes("�")) {
+      return utf8Text;
+    }
+
+    try {
+      return new TextDecoder("shift-jis").decode(buffer);
+    } catch {
+      return utf8Text;
+    }
+  }
+
+  async function importRecordsFromCsv(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await readCsvFile(file);
+      const { importedRecords, skippedCount } = parseRecordsFromCsv(text);
+      if (importedRecords.length === 0) {
+        setCsvMessage("取り込める記録が見つかりませんでした。");
+        return;
+      }
+
+      const nextRecords = [...records, ...importedRecords];
+      setRecords(nextRecords);
+      saveRecords(nextRecords);
+      const firstRecord = importedRecords[0];
+      setSelectedDate(firstRecord.date);
+      const [year, month] = firstRecord.date.split("-").map(Number);
+      setCurrentMonth(new Date(year, month - 1, 1));
+      setCsvMessage(
+        `${importedRecords.length}件の記録を取り込みました。${skippedCount ? `${skippedCount}件は日付・店舗・機種が不足していたため除外しました。` : ""}`,
+      );
+    } catch {
+      setCsvMessage("CSVの取り込みに失敗しました。");
+    } finally {
+      event.target.value = "";
+    }
+  }
 
   function moveMonth(amount: number) {
     setCurrentMonth(
@@ -880,6 +1190,27 @@ export function App() {
           </div>
         </section>
 
+        <section className="csv-panel">
+          <div className="csv-buttons">
+            <button className="text-button" type="button" onClick={() => csvInputRef.current?.click()}>
+              <Upload size={18} />
+              CSV取込
+            </button>
+            <button className="text-button" type="button" onClick={exportRecordsToCsv}>
+              <Download size={18} />
+              CSV出力
+            </button>
+          </div>
+          <input
+            ref={csvInputRef}
+            accept=".csv,text/csv"
+            className="csv-input"
+            type="file"
+            onChange={importRecordsFromCsv}
+          />
+          {csvMessage && <p>{csvMessage}</p>}
+        </section>
+
         <section className="record-list">
           {selectedRecords.length === 0 ? (
             <div className="empty-state">
@@ -1045,7 +1376,7 @@ export function App() {
 
               <div className="form-pair">
                 <label>
-                  現金投資額
+                  現金投資
                   <input
                     inputMode="numeric"
                     min="0"
@@ -1056,7 +1387,7 @@ export function App() {
                   />
                 </label>
                 <label>
-                  現金回収額
+                  現金回収
                   <input
                     inputMode="numeric"
                     min="0"

@@ -126,6 +126,7 @@ h3 {
 .month-panel,
 .day-summary,
 .summary-grid,
+.csv-panel,
 .record-item,
 .empty-state,
 .update-item {
@@ -262,6 +263,33 @@ h3 {
   font-size: 14px;
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+
+.csv-panel {
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.csv-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.csv-buttons .text-button {
+  width: 100%;
+}
+
+.csv-input {
+  display: none;
+}
+
+.csv-panel p {
+  color: #61706b;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin-top: 8px;
 }
 
 .record-list {
@@ -799,6 +827,7 @@ h3 {
 
   .day-summary,
   .summary-grid,
+  .csv-panel,
   .record-list,
   .updates-button {
     grid-column: 2;

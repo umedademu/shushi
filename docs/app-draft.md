@@ -27,6 +27,8 @@ Implemented draft behavior:
 - Save cash investment and cash recovery separately from saved-ball investment and saved-ball recovery.
 - Automatically update the selected rate's saved-ball count when a play record is saved.
 - Restore that saved-ball count adjustment when a play record is deleted.
+- Export play records as CSV.
+- Import CSV files exported from this app or from pRecord.
 
 ## Saved Fields
 
@@ -77,5 +79,7 @@ Saved balls are updated automatically from each play record:
 ## Notes
 
 `precord_data.csv` is a local export and should not be committed to the public repository.
+
+CSV import currently appends imported records to the browser's existing records. pRecord CSV rows are imported when date, store, and machine are present.
 
 The current browser-only storage is for the draft stage. For PC and smartphone sync, move the same data shape to Cloudflare D1 later.
