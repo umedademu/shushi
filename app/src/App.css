@@ -426,19 +426,19 @@ h3 {
 }
 
 .chart-line-area {
-  fill: rgba(21, 106, 86, 0.1);
+  fill: rgba(28, 103, 190, 0.12);
 }
 
 .chart-line-path {
   fill: none;
-  stroke: #156a56;
+  stroke: #1c67be;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 3;
 }
 
 .chart-line-dot {
-  fill: #156a56;
+  fill: #1c67be;
   stroke: #ffffff;
   stroke-width: 2;
 }
@@ -457,7 +457,7 @@ h3 {
 }
 
 .chart-bar-column {
-  fill: #156a56;
+  fill: #1c67be;
 }
 
 .chart-bar-column.amount-negative {
@@ -1062,7 +1062,7 @@ h3 {
 }
 
 .amount-positive {
-  color: #0d7a42 !important;
+  color: #1c67be !important;
 }
 
 .amount-negative {
@@ -1071,6 +1071,12 @@ h3 {
 
 .amount-even {
   color: #576662 !important;
+}
+
+.day-cell.selected .amount-positive,
+.day-cell.selected .amount-negative,
+.day-cell.selected .amount-even {
+  color: #ffffff !important;
 }
 
 @media (min-width: 900px) {

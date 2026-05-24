@@ -41,6 +41,7 @@ Implemented draft behavior:
 - Show the desktop view as a wider single column.
 - Show daily calendar profit in plain yen units instead of k units.
 - Show selected-day details in the order: summary, play record cards, then profit chart.
+- Show positive profit and positive saved-ball changes in blue, while keeping selected calendar day values readable.
 
 ## Saved Fields
 

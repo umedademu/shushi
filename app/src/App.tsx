@@ -184,6 +184,11 @@ const updateItems = [
     title: "日別表示の順番を変更",
     body: "カレンダー下の表示を、日別集計、稼働カード、収支グラフの順に並ぶようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "プラス収支の色を調整",
+    body: "プラス収支と貯玉プラスの表示を青系にし、選択中の日付でも数字が読みやすいようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [

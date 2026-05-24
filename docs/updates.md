@@ -34,3 +34,4 @@
 - Removed the duplicated selected-day add card and tightened the desktop layout.
 - Changed desktop display to a wider single column and changed calendar daily profit from k units to plain yen units.
 - Changed selected-day display order to summary, play record cards, then profit chart.
+- Changed positive profit and positive saved-ball change displays to blue and improved selected calendar day readability.
