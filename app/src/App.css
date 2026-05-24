@@ -348,6 +348,38 @@ h3 {
   color: #14231f;
 }
 
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 10px;
+  color: #52615d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+}
+
+.chart-legend-mark {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.chart-legend-profit {
+  background: #1c67be;
+}
+
+.chart-legend-expected {
+  background: #b7791f;
+}
+
 .chart-empty {
   border: 1px dashed #cfd9d5;
   border-radius: 8px;
@@ -437,6 +469,15 @@ h3 {
   stroke-width: 3;
 }
 
+.chart-expected-line-path {
+  fill: none;
+  stroke: #b7791f;
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
 .chart-line-dot {
   fill: #1c67be;
   stroke: #ffffff;
@@ -456,6 +497,17 @@ h3 {
   stroke-width: 1;
 }
 
+.chart-expected-dot {
+  fill: #b7791f;
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.chart-expected-dot.is-empty {
+  fill: #d8c6a8;
+  stroke-width: 1;
+}
+
 .chart-bar-column {
   fill: #1c67be;
 }
@@ -466,6 +518,10 @@ h3 {
 
 .chart-bar-column.amount-even {
   fill: #73817c;
+}
+
+.chart-expected-bar-column {
+  fill: #b7791f;
 }
 
 .chart-axis-labels {

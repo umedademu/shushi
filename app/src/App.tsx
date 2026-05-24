@@ -71,11 +71,13 @@ type ChartPoint = {
   key: string;
   label: string;
   value: number;
+  expectedValue: number;
   count: number;
 };
 
 type ChartPlotPoint = ChartPoint & {
   plotValue: number;
+  expectedPlotValue: number;
 };
 
 const storageKey = "shushi-play-records";
@@ -188,6 +190,11 @@ const updateItems = [
     date: "2026-05-24",
     title: "プラス収支の色を調整",
     body: "プラス収支と貯玉プラスの表示を青系にし、選択中の日付でも数字が読みやすいようにしました。",
+  },
+  {
+    date: "2026-05-24",
+    title: "収支グラフに期待値を追加",
+    body: "収支グラフに期待値も重ねて表示し、折れ線では別色の線、縦棒では隣の棒で比較できるようにしました。",
   },
 ];
 
@@ -496,11 +503,16 @@ function recordsProfit(records: PlayRecord[]) {
   return records.reduce((total, record) => total + profit(record), 0);
 }
 
+function recordsExpectedValue(records: PlayRecord[]) {
+  return records.reduce((total, record) => total + record.expectedValue, 0);
+}
+
 function chartPoint(key: string, label: string, records: PlayRecord[]): ChartPoint {
   return {
     key,
     label,
     value: recordsProfit(records),
+    expectedValue: recordsExpectedValue(records),
     count: records.length,
   };
 }
@@ -1021,18 +1033,22 @@ export function App() {
               : groupChart(records, "machineName");
     const activePoints = points.filter((point) => point.count > 0);
     const total = activePoints.reduce((sum, point) => sum + point.value, 0);
+    const expectedTotal = activePoints.reduce((sum, point) => sum + point.expectedValue, 0);
     const count = activePoints.reduce((sum, point) => sum + point.count, 0);
     let runningTotal = 0;
+    let runningExpectedTotal = 0;
     const linePoints = points
       .map<ChartPlotPoint>((point) => {
         runningTotal += isTrend ? point.value : 0;
+        runningExpectedTotal += isTrend ? point.expectedValue : 0;
         return {
           ...point,
           plotValue: isTrend ? runningTotal : point.value,
+          expectedPlotValue: isTrend ? runningExpectedTotal : point.expectedValue,
         };
       })
       .filter((point) => isTrend || point.count > 0);
-    const plotValues = linePoints.map((point) => point.plotValue);
+    const plotValues = linePoints.flatMap((point) => [point.plotValue, point.expectedPlotValue]);
     const rawMin = Math.min(0, ...plotValues);
     const rawMax = Math.max(0, ...plotValues);
     const rangePadding = rawMin === rawMax ? 1000 : (rawMax - rawMin) * 0.12;
@@ -1058,6 +1074,7 @@ export function App() {
       activePoints,
       best,
       count,
+      expectedTotal,
       isTrend,
       linePoints,
       plotMax,
@@ -1081,26 +1098,43 @@ export function App() {
           : chartPadding.left + (innerWidth / (chartData.linePoints.length - 1)) * index;
       return {
         ...point,
+        expectedY: toY(point.expectedPlotValue),
         x,
         y: toY(point.plotValue),
       };
     });
     const linePath = chartPointPath(coordinates);
+    const expectedLinePath = chartPointPath(
+      coordinates.map((point) => ({
+        ...point,
+        y: point.expectedY,
+      })),
+    );
     const zeroY = toY(0);
     const step = coordinates.length > 0 ? innerWidth / coordinates.length : innerWidth;
-    const barWidth = Math.min(28, Math.max(12, step * 0.62));
+    const barWidth = Math.min(18, Math.max(8, step * 0.32));
+    const barGap = Math.min(5, Math.max(2, step * 0.08));
     const barCoordinates = coordinates.map((point, index) => {
       const valueY = toY(point.plotValue);
+      const expectedY = toY(point.expectedPlotValue);
       const isEven = point.plotValue === 0;
+      const expectedIsEven = point.expectedPlotValue === 0;
       const height = isEven ? 2 : Math.abs(valueY - zeroY);
+      const expectedHeight = expectedIsEven ? 2 : Math.abs(expectedY - zeroY);
       const y = isEven ? zeroY - 1 : Math.min(valueY, zeroY);
+      const expectedBarY = expectedIsEven ? zeroY - 1 : Math.min(expectedY, zeroY);
+      const groupWidth = barWidth * 2 + barGap;
+      const groupX = chartPadding.left + step * index + (step - groupWidth) / 2;
 
       return {
         ...point,
         barHeight: height,
         barWidth,
-        barX: chartPadding.left + step * index + (step - barWidth) / 2,
+        barX: groupX,
         barY: y,
+        expectedBarHeight: expectedHeight,
+        expectedBarX: groupX + barWidth + barGap,
+        expectedBarY,
       };
     });
     const areaPath =
@@ -1108,7 +1142,7 @@ export function App() {
         ? `${linePath} L ${coordinates[coordinates.length - 1].x} ${zeroY} L ${coordinates[0].x} ${zeroY} Z`
         : "";
 
-    return { areaPath, barCoordinates, coordinates, linePath, zeroY };
+    return { areaPath, barCoordinates, coordinates, expectedLinePath, linePath, zeroY };
   }, [chartData]);
   const filteredOptions = useMemo(() => {
     if (!selectorField) {
@@ -1707,6 +1741,17 @@ export function App() {
             <strong>{chartData.count}件</strong>
           </div>
 
+          <div className="chart-legend" aria-label="グラフの凡例">
+            <span>
+              <i className="chart-legend-mark chart-legend-profit" />
+              収支 {signedCurrency(chartData.total)}
+            </span>
+            <span>
+              <i className="chart-legend-mark chart-legend-expected" />
+              期待値 {signedCurrency(chartData.expectedTotal)}
+            </span>
+          </div>
+
           {chartData.count === 0 ? (
             <div className="chart-empty">表示できる記録がありません。</div>
           ) : (
@@ -1772,35 +1817,62 @@ export function App() {
                       {chartGeometry.linePath && (
                         <path className="chart-line-path" d={chartGeometry.linePath} />
                       )}
+                      {chartGeometry.expectedLinePath && (
+                        <path className="chart-expected-line-path" d={chartGeometry.expectedLinePath} />
+                      )}
                       {chartGeometry.coordinates.map((point) => (
-                        <circle
-                          className={`chart-line-dot ${point.count > 0 ? classForAmount(point.value) : "is-empty"}`}
-                          cx={point.x}
-                          cy={point.y}
-                          key={point.key}
-                          r={point.count > 0 ? 3.5 : 2}
-                        >
-                          <title>
-                            {point.label} {signedCurrency(point.plotValue)}
-                          </title>
-                        </circle>
+                        <g key={point.key}>
+                          <circle
+                            className={`chart-line-dot ${point.count > 0 ? classForAmount(point.value) : "is-empty"}`}
+                            cx={point.x}
+                            cy={point.y}
+                            r={point.count > 0 ? 3.5 : 2}
+                          >
+                            <title>
+                              {point.label} 収支 {signedCurrency(point.plotValue)}
+                            </title>
+                          </circle>
+                          <circle
+                            className={`chart-expected-dot ${point.count > 0 ? "" : "is-empty"}`}
+                            cx={point.x}
+                            cy={point.expectedY}
+                            r={point.count > 0 ? 3 : 1.8}
+                          >
+                            <title>
+                              {point.label} 期待値 {signedCurrency(point.expectedPlotValue)}
+                            </title>
+                          </circle>
+                        </g>
                       ))}
                     </>
                   ) : (
                     chartGeometry.barCoordinates.map((point) => (
-                      <rect
-                        className={`chart-bar-column ${classForAmount(point.value)}`}
-                        height={point.barHeight}
-                        key={point.key}
-                        rx={4}
-                        width={point.barWidth}
-                        x={point.barX}
-                        y={point.barY}
-                      >
-                        <title>
-                          {point.label} {signedCurrency(point.value)}
-                        </title>
-                      </rect>
+                      <g key={point.key}>
+                        <rect
+                          className={`chart-bar-column ${classForAmount(point.value)}`}
+                          height={point.barHeight}
+                          rx={4}
+                          width={point.barWidth}
+                          x={point.barX}
+                          y={point.barY}
+                        >
+                          <title>
+                            {point.label} 収支 {signedCurrency(point.value)}
+                          </title>
+                        </rect>
+                        <rect
+                          className="chart-expected-bar-column"
+                          height={point.expectedBarHeight}
+                          rx={4}
+                          width={point.barWidth}
+                          x={point.expectedBarX}
+                          y={point.expectedBarY}
+                        >
+                          <title>
+                            {point.label} 期待値 {signedCurrency(point.expectedValue)}
+                          </title>
+                        </rect>
+                      </g>
                     ))
                   )}
                 </svg>
@@ -1820,7 +1892,9 @@ export function App() {
                           {signedCurrency(point.value)}
                         </strong>
                       </div>
-                      <small>{point.count}件</small>
+                      <small>
+                        期待値 {signedCurrency(point.expectedValue)} / {point.count}件
+                      </small>
                     </div>
                   );
                 })}
