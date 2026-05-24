@@ -15,6 +15,7 @@ type PlayRecord = {
   rateKind?: RateKind;
   rateUnitPrice?: number;
   rateExchangeCountPer100Yen?: number;
+  rateSavedCount?: number;
   rateReplayFeePercent?: number;
   investment: number;
   recovery: number;
@@ -31,6 +32,7 @@ type RateOption = {
   name: string;
   unitPrice: number;
   exchangeCountPer100Yen: number;
+  savedCount: number;
   replayFeePercent: number;
 };
 
@@ -39,6 +41,7 @@ type RateForm = {
   name: string;
   unitPrice: string;
   exchangeCountPer100Yen: string;
+  savedCount: string;
   replayFeePercent: string;
 };
 
@@ -94,6 +97,11 @@ const updateItems = [
     date: "2026-05-24",
     title: "店舗別レート設定を追加",
     body: "店舗ごとにパチンコやスロットのレート候補を作り、収支入力時に選べるようにしました。",
+  },
+  {
+    date: "2026-05-24",
+    title: "レート編集と貯玉保存を追加",
+    body: "レート候補を後から編集できるようにし、貯玉や貯メダルも保存して入力時に確認できるようにしました。",
   },
 ];
 
@@ -184,6 +192,7 @@ function loadRateOptions(): RateOption[] {
           name,
           unitPrice: Number(item?.unitPrice) || 0,
           exchangeCountPer100Yen: Number(item?.exchangeCountPer100Yen) || 0,
+          savedCount: Number(item?.savedCount) || 0,
           replayFeePercent: Number(item?.replayFeePercent) || 0,
         };
       })
@@ -240,6 +249,7 @@ function createRateForm(kind: RateKind = "pachinko"): RateForm {
       name: "20スロ",
       unitPrice: "21.73",
       exchangeCountPer100Yen: "5",
+      savedCount: "0",
       replayFeePercent: "0",
     };
   }
@@ -249,7 +259,19 @@ function createRateForm(kind: RateKind = "pachinko"): RateForm {
     name: "4パチ",
     unitPrice: "4",
     exchangeCountPer100Yen: "25",
+    savedCount: "0",
     replayFeePercent: "0",
+  };
+}
+
+function createRateFormFromRate(rate: RateOption): RateForm {
+  return {
+    kind: rate.kind,
+    name: rate.name,
+    unitPrice: String(rate.unitPrice),
+    exchangeCountPer100Yen: String(rate.exchangeCountPer100Yen),
+    savedCount: String(rate.savedCount),
+    replayFeePercent: String(rate.replayFeePercent),
   };
 }
 
@@ -324,12 +346,29 @@ function rateExchangeUnitLabel(kind: RateKind) {
   return kind === "pachinko" ? "玉交換" : "枚交換";
 }
 
-function rateSummary(rate: Pick<RateOption, "kind" | "unitPrice" | "exchangeCountPer100Yen" | "replayFeePercent">) {
+function rateSavedLabel(kind: RateKind) {
+  return kind === "pachinko" ? "貯玉" : "貯メダル";
+}
+
+function rateSavedUnitLabel(kind: RateKind) {
+  return kind === "pachinko" ? "玉" : "枚";
+}
+
+function rateSavedText(rate: Pick<RateOption, "kind" | "savedCount">) {
+  return `${rateSavedLabel(rate.kind)} ${rate.savedCount.toLocaleString("ja-JP")}${rateSavedUnitLabel(rate.kind)}`;
+}
+
+function rateSummary(
+  rate: Pick<
+    RateOption,
+    "kind" | "unitPrice" | "exchangeCountPer100Yen" | "savedCount" | "replayFeePercent"
+  >,
+) {
   return `${rateKindLabel(rate.kind)} / 1${rate.kind === "pachinko" ? "玉" : "枚"}${rate.unitPrice.toLocaleString(
     "ja-JP",
   )}円 / 100円あたり${rate.exchangeCountPer100Yen.toLocaleString("ja-JP")}${rateExchangeUnitLabel(
     rate.kind,
-  )} / 再プレイ${rate.replayFeePercent.toLocaleString("ja-JP")}%`;
+  )} / ${rateSavedText(rate)} / 再プレイ${rate.replayFeePercent.toLocaleString("ja-JP")}%`;
 }
 
 export function App() {
@@ -349,6 +388,7 @@ export function App() {
   const [rateOptions, setRateOptions] = useState<RateOption[]>(loadRateOptions);
   const [isRateSelectorOpen, setIsRateSelectorOpen] = useState(false);
   const [isRateEditorOpen, setIsRateEditorOpen] = useState(false);
+  const [editingRateId, setEditingRateId] = useState<string | null>(null);
   const [rateForm, setRateForm] = useState<RateForm>(() => createRateForm());
 
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
@@ -491,10 +531,18 @@ export function App() {
   function closeRateSelector() {
     setIsRateSelectorOpen(false);
     setIsRateEditorOpen(false);
+    setEditingRateId(null);
   }
 
   function openRateEditor(kind: RateKind) {
     setRateForm(createRateForm(kind));
+    setEditingRateId(null);
+    setIsRateEditorOpen(true);
+  }
+
+  function openRateEdit(rate: RateOption) {
+    setRateForm(createRateFormFromRate(rate));
+    setEditingRateId(rate.id);
     setIsRateEditorOpen(true);
   }
 
@@ -533,8 +581,26 @@ export function App() {
       name,
       unitPrice: toNumber(rateForm.unitPrice),
       exchangeCountPer100Yen: toNumber(rateForm.exchangeCountPer100Yen),
+      savedCount: toNumber(rateForm.savedCount),
       replayFeePercent: toNumber(rateForm.replayFeePercent),
     };
+
+    if (editingRateId) {
+      const nextOptions = rateOptions.map((rate) =>
+        rate.id === editingRateId ? { ...nextRate, id: editingRateId } : rate,
+      );
+      setRateOptions(nextOptions);
+      saveRateOptions(nextOptions);
+      setForm((current) =>
+        current.rateId === editingRateId
+          ? { ...current, rateName: nextRate.name }
+          : current,
+      );
+      setEditingRateId(null);
+      setIsRateEditorOpen(false);
+      return;
+    }
+
     const nextOptions = [...rateOptions, nextRate];
     setRateOptions(nextOptions);
     saveRateOptions(nextOptions);
@@ -591,6 +657,7 @@ export function App() {
       rateKind: selectedRate.kind,
       rateUnitPrice: selectedRate.unitPrice,
       rateExchangeCountPer100Yen: selectedRate.exchangeCountPer100Yen,
+      rateSavedCount: selectedRate.savedCount,
       rateReplayFeePercent: selectedRate.replayFeePercent,
       investment: toNumber(form.investment),
       recovery: toNumber(form.recovery),
@@ -857,14 +924,19 @@ export function App() {
               <div className="choice-field">
                 <span>レート</span>
                 <button
-                  className={`select-button ${form.rateName ? "" : "is-empty"}`}
+                  className={`select-button rate-select-button ${selectedRate ? "" : "is-empty"}`}
                   type="button"
                   onClick={openRateSelector}
                   disabled={!form.storeName}
                 >
-                  <span>
-                    {!form.storeName ? "店舗を先に選択" : form.rateName || "レートを選択"}
-                  </span>
+                  {selectedRate ? (
+                    <span className="rate-select-label">
+                      <strong>{selectedRate.name}</strong>
+                      <small>{rateSummary(selectedRate)}</small>
+                    </span>
+                  ) : (
+                    <span>{!form.storeName ? "店舗を先に選択" : "レートを選択"}</span>
+                  )}
                   <ChevronRight size={18} />
                 </button>
               </div>
@@ -1061,6 +1133,15 @@ export function App() {
                               {isSelected && <Check size={18} />}
                             </button>
                             <button
+                              className="rate-edit-button"
+                              type="button"
+                              onClick={() => openRateEdit(rate)}
+                              title="レートを編集"
+                              aria-label={`${rate.name}を編集`}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
                               className="rate-delete-button"
                               type="button"
                               onClick={() => deleteRateOption(rate.id)}
@@ -1083,12 +1164,15 @@ export function App() {
                   <header className="option-header">
                     <div>
                       <p className="eyebrow">設定</p>
-                      <h2>レート設定</h2>
+                      <h2>{editingRateId ? "レート編集" : "レート設定"}</h2>
                     </div>
                     <button
                       className="icon-button"
                       type="button"
-                      onClick={() => setIsRateEditorOpen(false)}
+                      onClick={() => {
+                        setIsRateEditorOpen(false);
+                        setEditingRateId(null);
+                      }}
                       title="閉じる"
                     >
                       <X size={20} />
@@ -1150,17 +1234,30 @@ export function App() {
                       </label>
                     </div>
 
-                    <label>
-                      再プレイ手数料率(%)
-                      <input
-                        inputMode="decimal"
-                        min="0"
-                        step="0.1"
-                        type="number"
-                        value={rateForm.replayFeePercent}
-                        onChange={(event) => updateRateForm("replayFeePercent", event.target.value)}
-                      />
-                    </label>
+                    <div className="form-pair">
+                      <label>
+                        {rateSavedLabel(rateForm.kind)}
+                        <input
+                          inputMode="numeric"
+                          min="0"
+                          type="number"
+                          value={rateForm.savedCount}
+                          onChange={(event) => updateRateForm("savedCount", event.target.value)}
+                          placeholder="0"
+                        />
+                      </label>
+                      <label>
+                        再プレイ手数料率(%)
+                        <input
+                          inputMode="decimal"
+                          min="0"
+                          step="0.1"
+                          type="number"
+                          value={rateForm.replayFeePercent}
+                          onChange={(event) => updateRateForm("replayFeePercent", event.target.value)}
+                        />
+                      </label>
+                    </div>
 
                     <div className="rate-preview">
                       <span>{rateKindLabel(rateForm.kind)}</span>
@@ -1169,12 +1266,14 @@ export function App() {
                       </strong>
                       <p>
                         100円あたり {rateForm.exchangeCountPer100Yen || 0}
-                        {rateExchangeUnitLabel(rateForm.kind)} / 再プレイ {rateForm.replayFeePercent || 0}%
+                        {rateExchangeUnitLabel(rateForm.kind)} / {rateSavedLabel(rateForm.kind)}{" "}
+                        {Number(rateForm.savedCount || 0).toLocaleString("ja-JP")}
+                        {rateSavedUnitLabel(rateForm.kind)} / 再プレイ {rateForm.replayFeePercent || 0}%
                       </p>
                     </div>
 
                     <button className="save-button" type="submit">
-                      設定完了
+                      {editingRateId ? "更新" : "設定完了"}
                     </button>
                   </form>
                 </section>

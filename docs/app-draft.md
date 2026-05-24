@@ -21,6 +21,9 @@ Implemented draft behavior:
 - Add favorites for stores and machines, saved in the browser and shown first in the selection sheets.
 - Add store-specific rate choices for pachinko and slot play.
 - Require choosing a rate choice when saving a new play record.
+- Edit existing rate choices from the rate selection sheet.
+- Save the current saved balls or medals for each store-specific rate.
+- Show exchange rate and saved balls or medals in the play entry rate field.
 
 ## Saved Fields
 
@@ -35,6 +38,7 @@ Each play record currently stores:
 - Rate category
 - Lending unit price
 - Exchange count per 100 yen
+- Saved ball or medal count at the time of entry
 - Replay fee percentage
 - Investment amount
 - Recovery amount
@@ -54,9 +58,12 @@ Each rate choice stores:
 - Rate name, such as 4-pachi, 1-pachi, 20-slot, or 5-slot
 - Lending unit price
 - Exchange count per 100 yen
+- Current saved ball or medal count
 - Replay fee percentage
 
 When a play record is saved, the selected rate settings are copied into that record so past records do not change if the store rate is edited later.
+
+Saved balls and medals are currently manual values. Automatic increases and decreases should be designed later after deciding how to handle cash investment, saved-ball use, payout, and exchange.
 
 ## Notes
 

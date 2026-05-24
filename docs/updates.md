@@ -14,3 +14,6 @@
 - Added favorite stores and machines so marked options appear first in the selection sheets.
 - Added store-specific rate choices for pachinko and slot play.
 - Made new play records store the selected rate settings together with the result.
+- Added editing for existing rate choices.
+- Added manual saved ball and medal counts to each rate choice.
+- Improved the play entry rate display so exchange rate and saved balls or medals are visible before saving.

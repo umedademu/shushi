@@ -419,6 +419,29 @@ h3 {
   color: #7c8a86;
 }
 
+.rate-select-button {
+  min-height: 64px;
+}
+
+.select-button .rate-select-label {
+  display: grid;
+  gap: 3px;
+  white-space: normal;
+}
+
+.rate-select-label strong {
+  color: #15231f;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.rate-select-label small {
+  color: #61706b;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .select-button:disabled {
   background: #eef3f1;
   color: #8a9894;
@@ -638,11 +661,20 @@ h3 {
   line-height: 1.35;
 }
 
+.rate-edit-button,
 .rate-delete-button {
   flex: 0 0 38px;
   width: 38px;
   border: 0;
   border-radius: 8px;
+}
+
+.rate-edit-button {
+  background: #eaf3f0;
+  color: #145746;
+}
+
+.rate-delete-button {
   background: #fff0ef;
   color: #a13e36;
 }
