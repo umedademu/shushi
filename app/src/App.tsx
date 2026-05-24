@@ -74,6 +74,10 @@ type ChartPoint = {
   count: number;
 };
 
+type ChartPlotPoint = ChartPoint & {
+  plotValue: number;
+};
+
 const storageKey = "shushi-play-records";
 const rateOptionKey = "shushi-store-rate-options";
 const favoriteStoreKey = "shushi-favorite-stores";
@@ -155,6 +159,11 @@ const updateItems = [
     title: "貯玉増減の表示を調整",
     body: "貯玉の差し引き表示を貯玉増減に変更し、スロットの貯玉数は枚で表示するようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "収支グラフを折れ線に変更",
+    body: "収支の流れが見やすいように、グラフ表示を棒から折れ線へ変更しました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -164,6 +173,15 @@ const chartModes: Array<{ key: ChartMode; label: string }> = [
   { key: "store", label: "店舗別" },
   { key: "machine", label: "機種別" },
 ];
+
+const chartSvgWidth = 360;
+const chartSvgHeight = 190;
+const chartPadding = {
+  top: 18,
+  right: 16,
+  bottom: 24,
+  left: 44,
+};
 
 function pad(value: number) {
   return String(value).padStart(2, "0");
@@ -510,6 +528,17 @@ function groupChart(records: PlayRecord[], field: "storeName" | "machineName"): 
     .map(([label, groupedRecords]) => chartPoint(label, label, groupedRecords))
     .sort((left, right) => Math.abs(right.value) - Math.abs(left.value))
     .slice(0, 12);
+}
+
+function chartDisplayValue(point: ChartPlotPoint | null | undefined, isTrend: boolean) {
+  if (!point) {
+    return 0;
+  }
+  return isTrend ? point.plotValue : point.value;
+}
+
+function chartPointPath(points: Array<ChartPlotPoint & { x: number; y: number }>) {
+  return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
 }
 
 function monthDays(date: Date) {
@@ -943,13 +972,14 @@ export function App() {
   const monthProfit = monthRecords.reduce((total, record) => total + profit(record), 0);
   const chartData = useMemo(() => {
     const year = currentMonth.getFullYear();
+    const isTrend = chartMode === "month" || chartMode === "year" || chartMode === "life";
     const chartTitle =
       chartMode === "month"
-        ? `${monthLabel(currentMonth)}の日別収支`
+        ? `${monthLabel(currentMonth)}の累計収支`
         : chartMode === "year"
-          ? `${year}年の月別収支`
+          ? `${year}年の累計収支`
           : chartMode === "life"
-            ? "生涯収支"
+            ? "生涯累計収支"
             : chartMode === "store"
               ? "店舗別収支"
               : "機種別収支";
@@ -966,18 +996,78 @@ export function App() {
     const activePoints = points.filter((point) => point.count > 0);
     const total = activePoints.reduce((sum, point) => sum + point.value, 0);
     const count = activePoints.reduce((sum, point) => sum + point.count, 0);
-    const maxAbs = Math.max(...points.map((point) => Math.abs(point.value)), 1);
-    const best = activePoints.reduce<ChartPoint | null>(
-      (current, point) => (!current || point.value > current.value ? point : current),
+    let runningTotal = 0;
+    const linePoints = points
+      .map<ChartPlotPoint>((point) => {
+        runningTotal += isTrend ? point.value : 0;
+        return {
+          ...point,
+          plotValue: isTrend ? runningTotal : point.value,
+        };
+      })
+      .filter((point) => isTrend || point.count > 0);
+    const plotValues = linePoints.map((point) => point.plotValue);
+    const rawMin = Math.min(0, ...plotValues);
+    const rawMax = Math.max(0, ...plotValues);
+    const rangePadding = rawMin === rawMax ? 1000 : (rawMax - rawMin) * 0.12;
+    const plotMin = rawMin - rangePadding;
+    const plotMax = rawMax + rangePadding;
+    const highlightSource = isTrend ? linePoints.filter((point) => point.count > 0) : linePoints;
+    const best = highlightSource.reduce<ChartPlotPoint | null>(
+      (current, point) =>
+        !current || chartDisplayValue(point, isTrend) > chartDisplayValue(current, isTrend)
+          ? point
+          : current,
       null,
     );
-    const worst = activePoints.reduce<ChartPoint | null>(
-      (current, point) => (!current || point.value < current.value ? point : current),
+    const worst = highlightSource.reduce<ChartPlotPoint | null>(
+      (current, point) =>
+        !current || chartDisplayValue(point, isTrend) < chartDisplayValue(current, isTrend)
+          ? point
+          : current,
       null,
     );
 
-    return { activePoints, best, count, maxAbs, points, title: chartTitle, total, worst };
+    return {
+      activePoints,
+      best,
+      count,
+      isTrend,
+      linePoints,
+      plotMax,
+      plotMin,
+      points,
+      title: chartTitle,
+      total,
+      worst,
+    };
   }, [chartMode, currentMonth, records]);
+  const chartGeometry = useMemo(() => {
+    const innerWidth = chartSvgWidth - chartPadding.left - chartPadding.right;
+    const innerHeight = chartSvgHeight - chartPadding.top - chartPadding.bottom;
+    const range = chartData.plotMax - chartData.plotMin || 1;
+    const toY = (value: number) =>
+      chartPadding.top + ((chartData.plotMax - value) / range) * innerHeight;
+    const coordinates = chartData.linePoints.map((point, index) => {
+      const x =
+        chartData.linePoints.length <= 1
+          ? chartPadding.left + innerWidth / 2
+          : chartPadding.left + (innerWidth / (chartData.linePoints.length - 1)) * index;
+      return {
+        ...point,
+        x,
+        y: toY(point.plotValue),
+      };
+    });
+    const linePath = chartPointPath(coordinates);
+    const zeroY = toY(0);
+    const areaPath =
+      coordinates.length > 0
+        ? `${linePath} L ${coordinates[coordinates.length - 1].x} ${zeroY} L ${coordinates[0].x} ${zeroY} Z`
+        : "";
+
+    return { areaPath, coordinates, linePath, zeroY };
+  }, [chartData]);
   const filteredOptions = useMemo(() => {
     if (!selectorField) {
       return [];
@@ -1584,23 +1674,85 @@ export function App() {
             <>
               <div className="chart-highlights">
                 <div>
-                  <span>最大プラス</span>
-                  <strong className={classForAmount(chartData.best?.value ?? 0)}>
-                    {chartData.best ? `${chartData.best.label} ${signedCurrency(chartData.best.value)}` : "-"}
+                  <span>{chartData.isTrend ? "最高到達" : "最大プラス"}</span>
+                  <strong className={classForAmount(chartDisplayValue(chartData.best, chartData.isTrend))}>
+                    {chartData.best
+                      ? `${chartData.best.label} ${signedCurrency(chartDisplayValue(chartData.best, chartData.isTrend))}`
+                      : "-"}
                   </strong>
                 </div>
                 <div>
-                  <span>最大マイナス</span>
-                  <strong className={classForAmount(chartData.worst?.value ?? 0)}>
-                    {chartData.worst ? `${chartData.worst.label} ${signedCurrency(chartData.worst.value)}` : "-"}
+                  <span>{chartData.isTrend ? "最低到達" : "最大マイナス"}</span>
+                  <strong className={classForAmount(chartDisplayValue(chartData.worst, chartData.isTrend))}>
+                    {chartData.worst
+                      ? `${chartData.worst.label} ${signedCurrency(chartDisplayValue(chartData.worst, chartData.isTrend))}`
+                      : "-"}
                   </strong>
+                </div>
+              </div>
+
+              <div className="chart-line-wrap">
+                <svg
+                  aria-label={`${chartData.title}の折れ線グラフ`}
+                  className="chart-line"
+                  role="img"
+                  viewBox={`0 0 ${chartSvgWidth} ${chartSvgHeight}`}
+                >
+                  <line
+                    className="chart-grid-line"
+                    x1={chartPadding.left}
+                    x2={chartSvgWidth - chartPadding.right}
+                    y1={chartPadding.top}
+                    y2={chartPadding.top}
+                  />
+                  <line
+                    className="chart-grid-line chart-grid-line-bottom"
+                    x1={chartPadding.left}
+                    x2={chartSvgWidth - chartPadding.right}
+                    y1={chartSvgHeight - chartPadding.bottom}
+                    y2={chartSvgHeight - chartPadding.bottom}
+                  />
+                  <line
+                    className="chart-zero-line"
+                    x1={chartPadding.left}
+                    x2={chartSvgWidth - chartPadding.right}
+                    y1={chartGeometry.zeroY}
+                    y2={chartGeometry.zeroY}
+                  />
+                  <text className="chart-y-label" x={4} y={chartPadding.top + 4}>
+                    {signedCurrency(Math.round(chartData.plotMax))}
+                  </text>
+                  <text className="chart-y-label" x={4} y={chartSvgHeight - chartPadding.bottom + 4}>
+                    {signedCurrency(Math.round(chartData.plotMin))}
+                  </text>
+                  {chartGeometry.areaPath && (
+                    <path className="chart-line-area" d={chartGeometry.areaPath} />
+                  )}
+                  {chartGeometry.linePath && (
+                    <path className="chart-line-path" d={chartGeometry.linePath} />
+                  )}
+                  {chartGeometry.coordinates.map((point) => (
+                    <circle
+                      className={`chart-line-dot ${point.count > 0 ? classForAmount(point.value) : "is-empty"}`}
+                      cx={point.x}
+                      cy={point.y}
+                      key={point.key}
+                      r={point.count > 0 ? 3.5 : 2}
+                    >
+                      <title>
+                        {point.label} {signedCurrency(chartData.isTrend ? point.plotValue : point.value)}
+                      </title>
+                    </circle>
+                  ))}
+                </svg>
+                <div className="chart-axis-labels">
+                  <span>{chartData.linePoints[0]?.label ?? ""}</span>
+                  <span>{chartData.linePoints[chartData.linePoints.length - 1]?.label ?? ""}</span>
                 </div>
               </div>
 
               <div className="chart-list">
                 {chartData.points.map((point) => {
-                  const width = point.value === 0 ? 0 : Math.max(4, (Math.abs(point.value) / chartData.maxAbs) * 100);
-
                   return (
                     <div className="chart-row" key={point.key}>
                       <div className="chart-row-head">
@@ -1608,12 +1760,6 @@ export function App() {
                         <strong className={classForAmount(point.value)}>
                           {signedCurrency(point.value)}
                         </strong>
-                      </div>
-                      <div className="chart-bar-track" aria-hidden="true">
-                        <span
-                          className={`chart-bar-fill ${classForAmount(point.value)}`}
-                          style={{ width: `${width}%` }}
-                        />
                       </div>
                       <small>{point.count}件</small>
                     </div>

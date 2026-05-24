@@ -34,6 +34,7 @@ Implemented draft behavior:
 - Replace existing records for dates that are included in an imported CSV.
 - Show profit charts by month, year, lifetime, store, and machine.
 - Show saved-ball change as "貯玉増減", and show slot saved counts with the medal unit.
+- Show the profit chart as a line chart instead of a bar chart.
 
 ## Saved Fields
 
@@ -61,11 +62,11 @@ Cash profit, saved-ball change, total profit, and play time are calculated from 
 
 ## Charts
 
-The home screen includes a profit chart with five views:
+The home screen includes a line-style profit chart with five views:
 
-- Monthly view: daily profit for the displayed month.
-- Yearly view: monthly profit for the displayed year.
-- Lifetime view: yearly profit across all records.
+- Monthly view: cumulative daily profit for the displayed month.
+- Yearly view: cumulative monthly profit for the displayed year.
+- Lifetime view: cumulative yearly profit across all records.
 - Store view: profit grouped by store.
 - Machine view: profit grouped by machine.
 
