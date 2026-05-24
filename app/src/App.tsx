@@ -10,10 +10,36 @@ type PlayRecord = {
   endTime: string;
   storeName: string;
   machineName: string;
+  rateId?: string;
+  rateName?: string;
+  rateKind?: RateKind;
+  rateUnitPrice?: number;
+  rateExchangeCountPer100Yen?: number;
+  rateReplayFeePercent?: number;
   investment: number;
   recovery: number;
   expectedValue: number;
   note: string;
+};
+
+type RateKind = "pachinko" | "slot";
+
+type RateOption = {
+  id: string;
+  storeName: string;
+  kind: RateKind;
+  name: string;
+  unitPrice: number;
+  exchangeCountPer100Yen: number;
+  replayFeePercent: number;
+};
+
+type RateForm = {
+  kind: RateKind;
+  name: string;
+  unitPrice: string;
+  exchangeCountPer100Yen: string;
+  replayFeePercent: string;
 };
 
 type RecordForm = {
@@ -22,6 +48,8 @@ type RecordForm = {
   endTime: string;
   storeName: string;
   machineName: string;
+  rateId: string;
+  rateName: string;
   investment: string;
   recovery: string;
   expectedValue: string;
@@ -32,6 +60,7 @@ type ViewMode = "home" | "updates";
 type OptionField = "storeName" | "machineName";
 
 const storageKey = "shushi-play-records";
+const rateOptionKey = "shushi-store-rate-options";
 const favoriteStoreKey = "shushi-favorite-stores";
 const favoriteMachineKey = "shushi-favorite-machines";
 
@@ -60,6 +89,11 @@ const updateItems = [
     date: "2026-05-24",
     title: "お気に入り候補を追加",
     body: "店舗名と機種名にお気に入りを付けて、選択画面の上に出せるようにしました。",
+  },
+  {
+    date: "2026-05-24",
+    title: "店舗別レート設定を追加",
+    body: "店舗ごとにパチンコやスロットのレート候補を作り、収支入力時に選べるようにしました。",
   },
 ];
 
@@ -117,6 +151,52 @@ function saveRecords(records: PlayRecord[]) {
   window.localStorage.setItem(storageKey, JSON.stringify(records));
 }
 
+function isRateKind(value: unknown): value is RateKind {
+  return value === "pachinko" || value === "slot";
+}
+
+function loadRateOptions(): RateOption[] {
+  try {
+    const raw = window.localStorage.getItem(rateOptionKey);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map((item) => {
+        const storeName = String(item?.storeName ?? "").trim();
+        const name = String(item?.name ?? "").trim();
+        const kind = item?.kind;
+
+        if (!storeName || !name || !isRateKind(kind)) {
+          return null;
+        }
+
+        return {
+          id: String(item?.id || crypto.randomUUID()),
+          storeName,
+          kind,
+          name,
+          unitPrice: Number(item?.unitPrice) || 0,
+          exchangeCountPer100Yen: Number(item?.exchangeCountPer100Yen) || 0,
+          replayFeePercent: Number(item?.replayFeePercent) || 0,
+        };
+      })
+      .filter((item): item is RateOption => Boolean(item));
+  } catch {
+    return [];
+  }
+}
+
+function saveRateOptions(options: RateOption[]) {
+  window.localStorage.setItem(rateOptionKey, JSON.stringify(options));
+}
+
 function loadStringList(key: string): string[] {
   try {
     const raw = window.localStorage.getItem(key);
@@ -144,10 +224,32 @@ function createForm(date: string, isFirstRecordForDay = false): RecordForm {
     endTime: currentTimeKey(),
     storeName: "",
     machineName: "",
+    rateId: "",
+    rateName: "",
     investment: "",
     recovery: "",
     expectedValue: "",
     note: "",
+  };
+}
+
+function createRateForm(kind: RateKind = "pachinko"): RateForm {
+  if (kind === "slot") {
+    return {
+      kind,
+      name: "20スロ",
+      unitPrice: "21.73",
+      exchangeCountPer100Yen: "5",
+      replayFeePercent: "0",
+    };
+  }
+
+  return {
+    kind,
+    name: "4パチ",
+    unitPrice: "4",
+    exchangeCountPer100Yen: "25",
+    replayFeePercent: "0",
   };
 }
 
@@ -210,6 +312,26 @@ function normalizeOptionText(value: string) {
   return value.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
 }
 
+function rateKindLabel(kind: RateKind) {
+  return kind === "pachinko" ? "パチンコ" : "スロット";
+}
+
+function rateUnitLabel(kind: RateKind) {
+  return kind === "pachinko" ? "貸玉(1玉)" : "貸メダル(1枚)";
+}
+
+function rateExchangeUnitLabel(kind: RateKind) {
+  return kind === "pachinko" ? "玉交換" : "枚交換";
+}
+
+function rateSummary(rate: Pick<RateOption, "kind" | "unitPrice" | "exchangeCountPer100Yen" | "replayFeePercent">) {
+  return `${rateKindLabel(rate.kind)} / 1${rate.kind === "pachinko" ? "玉" : "枚"}${rate.unitPrice.toLocaleString(
+    "ja-JP",
+  )}円 / 100円あたり${rate.exchangeCountPer100Yen.toLocaleString("ja-JP")}${rateExchangeUnitLabel(
+    rate.kind,
+  )} / 再プレイ${rate.replayFeePercent.toLocaleString("ja-JP")}%`;
+}
+
 export function App() {
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -224,6 +346,10 @@ export function App() {
   const [selectorQuery, setSelectorQuery] = useState("");
   const [favoriteStores, setFavoriteStores] = useState<string[]>(() => loadStringList(favoriteStoreKey));
   const [favoriteMachines, setFavoriteMachines] = useState<string[]>(() => loadStringList(favoriteMachineKey));
+  const [rateOptions, setRateOptions] = useState<RateOption[]>(loadRateOptions);
+  const [isRateSelectorOpen, setIsRateSelectorOpen] = useState(false);
+  const [isRateEditorOpen, setIsRateEditorOpen] = useState(false);
+  const [rateForm, setRateForm] = useState<RateForm>(() => createRateForm());
 
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
 
@@ -296,7 +422,15 @@ export function App() {
     }
     return new Set<string>();
   }, [favoriteMachines, favoriteStores, selectorField]);
-  const canSave = Boolean(form.storeName && form.machineName);
+  const selectedStoreRates = useMemo(
+    () => rateOptions.filter((rate) => rate.storeName === form.storeName),
+    [form.storeName, rateOptions],
+  );
+  const selectedRate = useMemo(
+    () => selectedStoreRates.find((rate) => rate.id === form.rateId) ?? null,
+    [form.rateId, selectedStoreRates],
+  );
+  const canSave = Boolean(form.storeName && form.machineName && selectedRate);
 
   function moveMonth(amount: number) {
     setCurrentMonth(
@@ -314,6 +448,10 @@ export function App() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function updateRateForm(key: keyof RateForm, value: string) {
+    setRateForm((current) => ({ ...current, [key]: value }));
+  }
+
   function openOptionSelector(field: OptionField) {
     setSelectorField(field);
     setSelectorQuery("");
@@ -329,8 +467,83 @@ export function App() {
       return;
     }
 
-    updateForm(selectorField, value);
+    if (selectorField === "storeName") {
+      setForm((current) => ({
+        ...current,
+        storeName: value,
+        rateId: current.storeName === value ? current.rateId : "",
+        rateName: current.storeName === value ? current.rateName : "",
+      }));
+    } else {
+      updateForm(selectorField, value);
+    }
     closeOptionSelector();
+  }
+
+  function openRateSelector() {
+    if (!form.storeName) {
+      return;
+    }
+
+    setIsRateSelectorOpen(true);
+  }
+
+  function closeRateSelector() {
+    setIsRateSelectorOpen(false);
+    setIsRateEditorOpen(false);
+  }
+
+  function openRateEditor(kind: RateKind) {
+    setRateForm(createRateForm(kind));
+    setIsRateEditorOpen(true);
+  }
+
+  function selectRate(rate: RateOption) {
+    setForm((current) => ({
+      ...current,
+      rateId: rate.id,
+      rateName: rate.name,
+    }));
+    closeRateSelector();
+  }
+
+  function deleteRateOption(rateId: string) {
+    const nextOptions = rateOptions.filter((rate) => rate.id !== rateId);
+    setRateOptions(nextOptions);
+    saveRateOptions(nextOptions);
+
+    if (form.rateId === rateId) {
+      setForm((current) => ({ ...current, rateId: "", rateName: "" }));
+    }
+  }
+
+  function handleRateSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const storeName = form.storeName.trim();
+    const name = rateForm.name.trim();
+
+    if (!storeName || !name) {
+      return;
+    }
+
+    const nextRate: RateOption = {
+      id: crypto.randomUUID(),
+      storeName,
+      kind: rateForm.kind,
+      name,
+      unitPrice: toNumber(rateForm.unitPrice),
+      exchangeCountPer100Yen: toNumber(rateForm.exchangeCountPer100Yen),
+      replayFeePercent: toNumber(rateForm.replayFeePercent),
+    };
+    const nextOptions = [...rateOptions, nextRate];
+    setRateOptions(nextOptions);
+    saveRateOptions(nextOptions);
+    setForm((current) => ({
+      ...current,
+      rateId: nextRate.id,
+      rateName: nextRate.name,
+    }));
+    closeRateSelector();
   }
 
   function updateFavoriteList(current: string[], value: string) {
@@ -362,7 +575,7 @@ export function App() {
     const storeName = form.storeName.trim();
     const machineName = form.machineName.trim();
 
-    if (!storeName || !machineName) {
+    if (!storeName || !machineName || !selectedRate) {
       return;
     }
 
@@ -373,6 +586,12 @@ export function App() {
       endTime: form.endTime,
       storeName,
       machineName,
+      rateId: selectedRate.id,
+      rateName: selectedRate.name,
+      rateKind: selectedRate.kind,
+      rateUnitPrice: selectedRate.unitPrice,
+      rateExchangeCountPer100Yen: selectedRate.exchangeCountPer100Yen,
+      rateReplayFeePercent: selectedRate.replayFeePercent,
       investment: toNumber(form.investment),
       recovery: toNumber(form.recovery),
       expectedValue: toNumber(form.expectedValue),
@@ -529,7 +748,10 @@ export function App() {
                 <div className="record-head">
                   <div>
                     <h3>{record.machineName}</h3>
-                    <p>{record.storeName}</p>
+                    <p>
+                      {record.storeName}
+                      {record.rateName ? ` / ${record.rateName}` : ""}
+                    </p>
                   </div>
                   <strong className={classForAmount(profit(record))}>
                     {signedCurrency(profit(record))}
@@ -628,6 +850,21 @@ export function App() {
                   onClick={() => openOptionSelector("storeName")}
                 >
                   <span>{form.storeName || "店舗を選択"}</span>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+
+              <div className="choice-field">
+                <span>レート</span>
+                <button
+                  className={`select-button ${form.rateName ? "" : "is-empty"}`}
+                  type="button"
+                  onClick={openRateSelector}
+                  disabled={!form.storeName}
+                >
+                  <span>
+                    {!form.storeName ? "店舗を先に選択" : form.rateName || "レートを選択"}
+                  </span>
                   <ChevronRight size={18} />
                 </button>
               </div>
@@ -766,6 +1003,180 @@ export function App() {
                       })
                     )}
                   </div>
+                </section>
+              </div>
+            )}
+
+            {isRateSelectorOpen && (
+              <div className="option-backdrop">
+                <section className="option-sheet rate-sheet" aria-label="レートを選択">
+                  <header className="option-header">
+                    <div>
+                      <p className="eyebrow">選択</p>
+                      <h2>レートを選択</h2>
+                    </div>
+                    <button className="icon-button" type="button" onClick={closeRateSelector} title="閉じる">
+                      <X size={20} />
+                    </button>
+                  </header>
+
+                  <div className="rate-action-row">
+                    <button className="text-button" type="button" onClick={() => openRateEditor("pachinko")}>
+                      <Plus size={18} />
+                      パチンコ追加
+                    </button>
+                    <button className="text-button" type="button" onClick={() => openRateEditor("slot")}>
+                      <Plus size={18} />
+                      スロット追加
+                    </button>
+                  </div>
+
+                  <p className="option-count">
+                    {form.storeName} / {selectedStoreRates.length}件
+                  </p>
+
+                  <div className="option-list">
+                    {selectedStoreRates.length === 0 ? (
+                      <p className="option-empty">
+                        この店舗のレートはまだありません。
+                      </p>
+                    ) : (
+                      selectedStoreRates.map((rate) => {
+                        const isSelected = rate.id === form.rateId;
+
+                        return (
+                          <div
+                            className={`option-row rate-option-row ${isSelected ? "is-selected" : ""}`}
+                            key={rate.id}
+                          >
+                            <button
+                              className="option-pick rate-option-pick"
+                              type="button"
+                              onClick={() => selectRate(rate)}
+                            >
+                              <span>
+                                <strong>{rate.name}</strong>
+                                <small>{rateSummary(rate)}</small>
+                              </span>
+                              {isSelected && <Check size={18} />}
+                            </button>
+                            <button
+                              className="rate-delete-button"
+                              type="button"
+                              onClick={() => deleteRateOption(rate.id)}
+                              title="レートを削除"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {isRateEditorOpen && (
+              <div className="option-backdrop rate-editor-backdrop">
+                <section className="option-sheet rate-editor-sheet" aria-label="レート設定">
+                  <header className="option-header">
+                    <div>
+                      <p className="eyebrow">設定</p>
+                      <h2>レート設定</h2>
+                    </div>
+                    <button
+                      className="icon-button"
+                      type="button"
+                      onClick={() => setIsRateEditorOpen(false)}
+                      title="閉じる"
+                    >
+                      <X size={20} />
+                    </button>
+                  </header>
+
+                  <form className="record-form" onSubmit={handleRateSubmit}>
+                    <div className="rate-kind-switch" aria-label="区分">
+                      <button
+                        className={`rate-kind-button ${rateForm.kind === "pachinko" ? "is-active" : ""}`}
+                        type="button"
+                        onClick={() => setRateForm(createRateForm("pachinko"))}
+                      >
+                        パチンコ
+                      </button>
+                      <button
+                        className={`rate-kind-button ${rateForm.kind === "slot" ? "is-active" : ""}`}
+                        type="button"
+                        onClick={() => setRateForm(createRateForm("slot"))}
+                      >
+                        スロット
+                      </button>
+                    </div>
+
+                    <label>
+                      レート名
+                      <input
+                        value={rateForm.name}
+                        onChange={(event) => updateRateForm("name", event.target.value)}
+                        placeholder="4パチ"
+                        required
+                      />
+                    </label>
+
+                    <div className="form-pair">
+                      <label>
+                        {rateUnitLabel(rateForm.kind)}
+                        <input
+                          inputMode="decimal"
+                          min="0"
+                          step="0.01"
+                          type="number"
+                          value={rateForm.unitPrice}
+                          onChange={(event) => updateRateForm("unitPrice", event.target.value)}
+                          required
+                        />
+                      </label>
+                      <label>
+                        交換率(100円辺り)
+                        <input
+                          inputMode="decimal"
+                          min="0"
+                          step="0.01"
+                          type="number"
+                          value={rateForm.exchangeCountPer100Yen}
+                          onChange={(event) => updateRateForm("exchangeCountPer100Yen", event.target.value)}
+                          required
+                        />
+                      </label>
+                    </div>
+
+                    <label>
+                      再プレイ手数料率(%)
+                      <input
+                        inputMode="decimal"
+                        min="0"
+                        step="0.1"
+                        type="number"
+                        value={rateForm.replayFeePercent}
+                        onChange={(event) => updateRateForm("replayFeePercent", event.target.value)}
+                      />
+                    </label>
+
+                    <div className="rate-preview">
+                      <span>{rateKindLabel(rateForm.kind)}</span>
+                      <strong>
+                        {rateForm.name || "未入力"} / {rateUnitLabel(rateForm.kind)} {rateForm.unitPrice || 0}円
+                      </strong>
+                      <p>
+                        100円あたり {rateForm.exchangeCountPer100Yen || 0}
+                        {rateExchangeUnitLabel(rateForm.kind)} / 再プレイ {rateForm.replayFeePercent || 0}%
+                      </p>
+                    </div>
+
+                    <button className="save-button" type="submit">
+                      設定完了
+                    </button>
+                  </form>
                 </section>
               </div>
             )}

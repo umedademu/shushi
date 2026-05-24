@@ -19,6 +19,8 @@ Implemented draft behavior:
 - Replace free input for stores and machines with a searchable selection sheet for mobile use.
 - Refresh selectable data from halldata to 353 stores and 336 machines.
 - Add favorites for stores and machines, saved in the browser and shown first in the selection sheets.
+- Add store-specific rate choices for pachinko and slot play.
+- Require choosing a rate choice when saving a new play record.
 
 ## Saved Fields
 
@@ -29,12 +31,32 @@ Each play record currently stores:
 - End time
 - Store name
 - Machine name
+- Selected rate name
+- Rate category
+- Lending unit price
+- Exchange count per 100 yen
+- Replay fee percentage
 - Investment amount
 - Recovery amount
 - Expected value
 - Memo
 
 Profit and play time are calculated from the saved values.
+
+## Rate Settings
+
+Rate choices are currently saved per store in the browser.
+
+Each rate choice stores:
+
+- Store name
+- Category: pachinko or slot
+- Rate name, such as 4-pachi, 1-pachi, 20-slot, or 5-slot
+- Lending unit price
+- Exchange count per 100 yen
+- Replay fee percentage
+
+When a play record is saved, the selected rate settings are copied into that record so past records do not change if the store rate is edited later.
 
 ## Notes
 
