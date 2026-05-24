@@ -2139,36 +2139,36 @@ export function App() {
                       </div>
                       <div className="chart-horizontal-bars">
                         <div className="chart-horizontal-meter">
-                          <span
-                            className="chart-horizontal-zero"
-                            style={horizontalZeroStyle(chartData.barMin, chartData.barMax)}
-                          />
-                          <span
-                            className={`chart-horizontal-fill chart-profit-fill ${classForAmount(point.value)}`}
-                            style={horizontalBarStyle(point.value, chartData.barMin, chartData.barMax)}
-                          />
-                          <span className="chart-horizontal-value">
-                            <span>収支</span>
-                            <strong className={classForAmount(point.value)}>
-                              {signedCurrency(point.value)}
-                            </strong>
+                          <span className="chart-horizontal-kind">収支</span>
+                          <span className="chart-horizontal-track">
+                            <span
+                              className="chart-horizontal-zero"
+                              style={horizontalZeroStyle(chartData.barMin, chartData.barMax)}
+                            />
+                            <span
+                              className={`chart-horizontal-fill chart-profit-fill ${classForAmount(point.value)}`}
+                              style={horizontalBarStyle(point.value, chartData.barMin, chartData.barMax)}
+                            />
                           </span>
+                          <strong className={`chart-horizontal-amount ${classForAmount(point.value)}`}>
+                            {signedCurrency(point.value)}
+                          </strong>
                         </div>
                         <div className="chart-horizontal-meter">
-                          <span
-                            className="chart-horizontal-zero"
-                            style={horizontalZeroStyle(chartData.barMin, chartData.barMax)}
-                          />
-                          <span
-                            className={`chart-horizontal-fill chart-expected-fill ${classForAmount(point.expectedValue)}`}
-                            style={horizontalBarStyle(point.expectedValue, chartData.barMin, chartData.barMax)}
-                          />
-                          <span className="chart-horizontal-value">
-                            <span>期待値</span>
-                            <strong className={classForAmount(point.expectedValue)}>
-                              {signedCurrency(point.expectedValue)}
-                            </strong>
+                          <span className="chart-horizontal-kind">期待値</span>
+                          <span className="chart-horizontal-track">
+                            <span
+                              className="chart-horizontal-zero"
+                              style={horizontalZeroStyle(chartData.barMin, chartData.barMax)}
+                            />
+                            <span
+                              className={`chart-horizontal-fill chart-expected-fill ${classForAmount(point.expectedValue)}`}
+                              style={horizontalBarStyle(point.expectedValue, chartData.barMin, chartData.barMax)}
+                            />
                           </span>
+                          <strong className={`chart-horizontal-amount ${classForAmount(point.expectedValue)}`}>
+                            {signedCurrency(point.expectedValue)}
+                          </strong>
                         </div>
                       </div>
                     </div>

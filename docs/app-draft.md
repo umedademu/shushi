@@ -36,6 +36,7 @@ Implemented draft behavior:
 - Show saved-ball change as "貯玉増減", and show slot saved counts with the medal unit.
 - Show the profit chart as a line chart instead of a bar chart.
 - Show store and machine profit charts as horizontal bar lists.
+- Keep store and machine chart bars in a separate center area so they do not cover labels or amounts.
 - Show expected value together with profit in the charts.
 - Show expected value as a second line in line charts and as a second bar in store and machine rows.
 - Show expected values with plus/minus signs and amount colors.
@@ -84,7 +85,7 @@ The home screen includes a line-style profit chart with five views:
 
 The monthly chart uses the same displayed month as the main calendar. Moving the month from either place updates both sections.
 
-Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right.
+Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right. In the store and machine views, the row label, bar area, and amount are separated so long positive or negative bars do not cover text.
 
 ## Rate Settings
 
