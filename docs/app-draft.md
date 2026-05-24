@@ -31,6 +31,7 @@ Implemented draft behavior:
 - Import CSV files exported from this app or from pRecord.
 - Edit a saved play record by selecting its daily record card.
 - Estimate saved-ball investment and recovery from pRecord CSV rows when profit and saved-ball difference can determine a rate value.
+- Replace existing records for dates that are included in an imported CSV.
 
 ## Saved Fields
 
@@ -83,6 +84,6 @@ Saved balls are updated automatically from each play record:
 
 `precord_data.csv` is a local export and should not be committed to the public repository.
 
-CSV import currently appends imported records to the browser's existing records. pRecord CSV rows are imported when date, store, and machine are present. When pRecord has a saved-ball difference and profit value, the app estimates a rate value from those numbers and stores cash investment/recovery as 0 while filling saved-ball investment/recovery from pRecord investment/recovery.
+CSV import replaces existing records for any date included in the CSV, while leaving dates not included in the CSV unchanged. pRecord CSV rows are imported when date, store, and machine are present. When pRecord has a saved-ball difference and profit value, the app estimates a rate value from those numbers and stores cash investment/recovery as 0 while filling saved-ball investment/recovery from pRecord investment/recovery.
 
 The current browser-only storage is for the draft stage. For PC and smartphone sync, move the same data shape to Cloudflare D1 later.

@@ -132,6 +132,11 @@ const updateItems = [
     title: "pRecordの貯玉取り込みを改善",
     body: "pRecordのCSVから貯玉稼働を取り込む時に、投資額・回収額・収支・貯玉から貯玉投資と貯玉回収を推定するようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "CSV取り込み時の同日置き換えを追加",
+    body: "CSVに含まれる日付の既存記録は、追加ではなくCSV側の記録へ丸ごと置き換えるようにしました。",
+  },
 ];
 
 function pad(value: number) {
@@ -937,15 +942,36 @@ export function App() {
         return;
       }
 
-      const nextRecords = [...records, ...importedRecords];
+      const importedDates = new Set(importedRecords.map((record) => record.date));
+      const replacedRecords = records.filter((record) => importedDates.has(record.date));
+      const replacementAdjustments = new Map<string, number>();
+      replacedRecords.forEach((record) => {
+        if (!record.rateId) {
+          return;
+        }
+
+        replacementAdjustments.set(
+          record.rateId,
+          (replacementAdjustments.get(record.rateId) ?? 0) - savedProfit(record),
+        );
+      });
+
+      const nextRecords = [
+        ...records.filter((record) => !importedDates.has(record.date)),
+        ...importedRecords,
+      ];
       setRecords(nextRecords);
       saveRecords(nextRecords);
+      replacementAdjustments.forEach((amount, rateId) => updateRateSavedCount(rateId, amount));
       const firstRecord = importedRecords[0];
       setSelectedDate(firstRecord.date);
       const [year, month] = firstRecord.date.split("-").map(Number);
       setCurrentMonth(new Date(year, month - 1, 1));
+      if (editingRecord && importedDates.has(editingRecord.date)) {
+        closeEditor();
+      }
       setCsvMessage(
-        `${importedRecords.length}件の記録を取り込みました。${skippedCount ? `${skippedCount}件は日付・店舗・機種が不足していたため除外しました。` : ""}`,
+        `${importedRecords.length}件の記録を取り込み、${importedDates.size}日分をCSVの内容に置き換えました。${replacedRecords.length ? `既存の${replacedRecords.length}件は置き換え済みです。` : ""}${skippedCount ? `${skippedCount}件は日付・店舗・機種が不足していたため除外しました。` : ""}`,
       );
     } catch {
       setCsvMessage("CSVの取り込みに失敗しました。");
