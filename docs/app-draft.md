@@ -13,6 +13,7 @@ Implemented draft behavior:
 - Store records in the browser for now.
 - Use store names and machine names from the existing halldata export as input suggestions.
 - Show a simple update information page inside the app.
+- Make start and end time inputs use 5-minute steps.
 
 ## Saved Fields
 

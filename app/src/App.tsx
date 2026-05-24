@@ -38,6 +38,11 @@ const updateItems = [
     title: "収支入力の叩き台を追加",
     body: "カレンダー、日別一覧、スマホ向け入力画面、店舗名と機種名の候補を追加しました。",
   },
+  {
+    date: "2026-05-24",
+    title: "時刻入力を5分刻みに変更",
+    body: "開始時刻と終了時刻を5分単位で入力しやすいようにしました。",
+  },
 ];
 
 function pad(value: number) {
@@ -450,6 +455,7 @@ export function App() {
                   開始時刻
                   <input
                     type="time"
+                    step="300"
                     value={form.startTime}
                     onChange={(event) => updateForm("startTime", event.target.value)}
                   />
@@ -458,6 +464,7 @@ export function App() {
                   終了時刻
                   <input
                     type="time"
+                    step="300"
                     value={form.endTime}
                     onChange={(event) => updateForm("endTime", event.target.value)}
                   />
