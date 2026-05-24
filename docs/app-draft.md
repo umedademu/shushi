@@ -32,6 +32,7 @@ Implemented draft behavior:
 - Edit a saved play record by selecting its daily record card.
 - Estimate saved-ball investment and recovery from pRecord CSV rows when profit and saved-ball difference can determine a rate value.
 - Replace existing records for dates that are included in an imported CSV.
+- Show profit charts by month, year, lifetime, store, and machine.
 
 ## Saved Fields
 
@@ -56,6 +57,16 @@ Each play record currently stores:
 - Memo
 
 Cash profit, saved-ball difference, total profit, and play time are calculated from the saved values. Total profit includes saved-ball difference converted by the selected or imported exchange value.
+
+## Charts
+
+The home screen includes a profit chart with five views:
+
+- Monthly view: daily profit for the displayed month.
+- Yearly view: monthly profit for the displayed year.
+- Lifetime view: yearly profit across all records.
+- Store view: profit grouped by store.
+- Machine view: profit grouped by machine.
 
 ## Rate Settings
 

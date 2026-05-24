@@ -65,6 +65,14 @@ type RecordForm = {
 
 type ViewMode = "home" | "updates";
 type OptionField = "storeName" | "machineName";
+type ChartMode = "month" | "year" | "life" | "store" | "machine";
+
+type ChartPoint = {
+  key: string;
+  label: string;
+  value: number;
+  count: number;
+};
 
 const storageKey = "shushi-play-records";
 const rateOptionKey = "shushi-store-rate-options";
@@ -137,6 +145,19 @@ const updateItems = [
     title: "CSV取り込み時の同日置き換えを追加",
     body: "CSVに含まれる日付の既存記録は、追加ではなくCSV側の記録へ丸ごと置き換えるようにしました。",
   },
+  {
+    date: "2026-05-24",
+    title: "収支グラフを追加",
+    body: "月別、年別、生涯収支、店舗別、機種別に切り替えられる収支グラフを追加しました。",
+  },
+];
+
+const chartModes: Array<{ key: ChartMode; label: string }> = [
+  { key: "month", label: "月別" },
+  { key: "year", label: "年別" },
+  { key: "life", label: "生涯" },
+  { key: "store", label: "店舗別" },
+  { key: "machine", label: "機種別" },
 ];
 
 function pad(value: number) {
@@ -397,6 +418,70 @@ function durationHours(startTime: string, endTime: string) {
   }
 
   return Math.max(0, (end - start) / 60);
+}
+
+function recordsProfit(records: PlayRecord[]) {
+  return records.reduce((total, record) => total + profit(record), 0);
+}
+
+function chartPoint(key: string, label: string, records: PlayRecord[]): ChartPoint {
+  return {
+    key,
+    label,
+    value: recordsProfit(records),
+    count: records.length,
+  };
+}
+
+function monthChart(records: PlayRecord[], date: Date): ChartPoint[] {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  return Array.from({ length: daysInMonth }, (_, index) => {
+    const day = index + 1;
+    const key = `${year}-${pad(month + 1)}-${pad(day)}`;
+    return chartPoint(key, `${day}日`, records.filter((record) => record.date === key));
+  });
+}
+
+function yearChart(records: PlayRecord[], date: Date): ChartPoint[] {
+  const year = date.getFullYear();
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    const key = `${year}-${pad(month)}`;
+    return chartPoint(
+      key,
+      `${month}月`,
+      records.filter((record) => record.date.startsWith(`${key}-`)),
+    );
+  });
+}
+
+function lifeChart(records: PlayRecord[]): ChartPoint[] {
+  const grouped = new Map<string, PlayRecord[]>();
+  records.forEach((record) => {
+    const year = record.date.slice(0, 4);
+    grouped.set(year, [...(grouped.get(year) ?? []), record]);
+  });
+
+  return Array.from(grouped.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([year, yearRecords]) => chartPoint(year, `${year}年`, yearRecords));
+}
+
+function groupChart(records: PlayRecord[], field: "storeName" | "machineName"): ChartPoint[] {
+  const grouped = new Map<string, PlayRecord[]>();
+  records.forEach((record) => {
+    const label = record[field] || "未設定";
+    grouped.set(label, [...(grouped.get(label) ?? []), record]);
+  });
+
+  return Array.from(grouped.entries())
+    .map(([label, groupedRecords]) => chartPoint(label, label, groupedRecords))
+    .sort((left, right) => Math.abs(right.value) - Math.abs(left.value))
+    .slice(0, 12);
 }
 
 function monthDays(date: Date) {
@@ -785,6 +870,7 @@ export function App() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [form, setForm] = useState<RecordForm>(() => createForm(todayKey(), true));
   const [viewMode, setViewMode] = useState<ViewMode>("home");
+  const [chartMode, setChartMode] = useState<ChartMode>("month");
   const [selectorField, setSelectorField] = useState<OptionField | null>(null);
   const [selectorQuery, setSelectorQuery] = useState("");
   const [favoriteStores, setFavoriteStores] = useState<string[]>(() => loadStringList(favoriteStoreKey));
@@ -826,6 +912,43 @@ export function App() {
     0,
   );
   const monthProfit = monthRecords.reduce((total, record) => total + profit(record), 0);
+  const chartData = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const chartTitle =
+      chartMode === "month"
+        ? `${monthLabel(currentMonth)}の日別収支`
+        : chartMode === "year"
+          ? `${year}年の月別収支`
+          : chartMode === "life"
+            ? "生涯収支"
+            : chartMode === "store"
+              ? "店舗別収支"
+              : "機種別収支";
+    const points =
+      chartMode === "month"
+        ? monthChart(records, currentMonth)
+        : chartMode === "year"
+          ? yearChart(records, currentMonth)
+          : chartMode === "life"
+            ? lifeChart(records)
+            : chartMode === "store"
+              ? groupChart(records, "storeName")
+              : groupChart(records, "machineName");
+    const activePoints = points.filter((point) => point.count > 0);
+    const total = activePoints.reduce((sum, point) => sum + point.value, 0);
+    const count = activePoints.reduce((sum, point) => sum + point.count, 0);
+    const maxAbs = Math.max(...points.map((point) => Math.abs(point.value)), 1);
+    const best = activePoints.reduce<ChartPoint | null>(
+      (current, point) => (!current || point.value > current.value ? point : current),
+      null,
+    );
+    const worst = activePoints.reduce<ChartPoint | null>(
+      (current, point) => (!current || point.value < current.value ? point : current),
+      null,
+    );
+
+    return { activePoints, best, count, maxAbs, points, title: chartTitle, total, worst };
+  }, [chartMode, currentMonth, records]);
   const filteredOptions = useMemo(() => {
     if (!selectorField) {
       return [];
@@ -1394,6 +1517,81 @@ export function App() {
             <span>時間</span>
             <strong>{selectedHours.toFixed(1)}時間</strong>
           </div>
+        </section>
+
+        <section className="chart-panel">
+          <header className="chart-header">
+            <div>
+              <p className="eyebrow">分析</p>
+              <h2>収支グラフ</h2>
+            </div>
+            <strong className={classForAmount(chartData.total)}>
+              {signedCurrency(chartData.total)}
+            </strong>
+          </header>
+
+          <div className="chart-tabs" aria-label="収支グラフの切り替え">
+            {chartModes.map((mode) => (
+              <button
+                className={`chart-tab ${chartMode === mode.key ? "is-active" : ""}`}
+                key={mode.key}
+                type="button"
+                onClick={() => setChartMode(mode.key)}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="chart-title-row">
+            <span>{chartData.title}</span>
+            <strong>{chartData.count}件</strong>
+          </div>
+
+          {chartData.count === 0 ? (
+            <div className="chart-empty">表示できる記録がありません。</div>
+          ) : (
+            <>
+              <div className="chart-highlights">
+                <div>
+                  <span>最大プラス</span>
+                  <strong className={classForAmount(chartData.best?.value ?? 0)}>
+                    {chartData.best ? `${chartData.best.label} ${signedCurrency(chartData.best.value)}` : "-"}
+                  </strong>
+                </div>
+                <div>
+                  <span>最大マイナス</span>
+                  <strong className={classForAmount(chartData.worst?.value ?? 0)}>
+                    {chartData.worst ? `${chartData.worst.label} ${signedCurrency(chartData.worst.value)}` : "-"}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="chart-list">
+                {chartData.points.map((point) => {
+                  const width = point.value === 0 ? 0 : Math.max(4, (Math.abs(point.value) / chartData.maxAbs) * 100);
+
+                  return (
+                    <div className="chart-row" key={point.key}>
+                      <div className="chart-row-head">
+                        <span>{point.label}</span>
+                        <strong className={classForAmount(point.value)}>
+                          {signedCurrency(point.value)}
+                        </strong>
+                      </div>
+                      <div className="chart-bar-track" aria-hidden="true">
+                        <span
+                          className={`chart-bar-fill ${classForAmount(point.value)}`}
+                          style={{ width: `${width}%` }}
+                        />
+                      </div>
+                      <small>{point.count}件</small>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </section>
 
         <section className="csv-panel">

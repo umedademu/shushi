@@ -27,3 +27,4 @@
 - Improved pRecord CSV import so saved-ball play can be restored from investment, recovery, profit, and saved-ball difference.
 - Added total profit display to the entry form so saved-ball value is included in the yen result.
 - Changed CSV import so dates included in the CSV replace existing records for those same dates.
+- Added profit charts with monthly, yearly, lifetime, store, and machine views.

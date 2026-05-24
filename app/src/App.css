@@ -126,6 +126,7 @@ h3 {
 .month-panel,
 .day-summary,
 .summary-grid,
+.chart-panel,
 .csv-panel,
 .record-item,
 .empty-state,
@@ -263,6 +264,160 @@ h3 {
   font-size: 14px;
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+
+.chart-panel {
+  margin-top: 10px;
+  padding: 14px;
+}
+
+.chart-header,
+.chart-title-row,
+.chart-row-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chart-header > strong {
+  flex: 0 0 auto;
+  font-size: 17px;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.chart-tab {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #edf3f1;
+  color: #52615d;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.chart-tab.is-active {
+  background: #156a56;
+  color: #ffffff;
+}
+
+.chart-title-row {
+  margin-top: 12px;
+  color: #52615d;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chart-title-row strong {
+  color: #14231f;
+}
+
+.chart-empty {
+  border: 1px dashed #cfd9d5;
+  border-radius: 8px;
+  color: #697773;
+  font-size: 14px;
+  margin-top: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.chart-highlights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.chart-highlights div {
+  min-width: 0;
+  border: 1px solid #e0e8e5;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.chart-highlights span,
+.chart-row small {
+  color: #72807c;
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.chart-highlights strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.chart-list {
+  display: grid;
+  gap: 10px;
+  max-height: 380px;
+  margin-top: 12px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.chart-row {
+  min-width: 0;
+}
+
+.chart-row-head span {
+  min-width: 0;
+  color: #263632;
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-row-head strong {
+  flex: 0 0 auto;
+  font-size: 13px;
+}
+
+.chart-bar-track {
+  height: 8px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #e8efec;
+}
+
+.chart-bar-fill {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+}
+
+.chart-bar-fill.amount-positive {
+  background: #0d7a42;
+}
+
+.chart-bar-fill.amount-negative {
+  background: #c64232;
+}
+
+.chart-bar-fill.amount-even {
+  background: #9aa7a3;
+}
+
+.chart-row small {
+  margin-top: 4px;
 }
 
 .csv-panel {
@@ -841,6 +996,7 @@ h3 {
 
   .day-summary,
   .summary-grid,
+  .chart-panel,
   .csv-panel,
   .record-list,
   .updates-button {
@@ -867,6 +1023,7 @@ h3 {
   }
 
   .record-stats,
+  .chart-highlights,
   .form-pair {
     grid-template-columns: 1fr;
   }
