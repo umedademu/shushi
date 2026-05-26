@@ -48,3 +48,4 @@
 - Moved the pachinko and slot rate addition buttons into the rate and saved-ball section and clarified their labels.
 - Added a total saved-ball summary to the store list, with yen conversion plus pachinko and slot unit totals.
 - Added total expected value to each store card in the store list.
+- Removed the registered/self-registered label from the top of store cards.

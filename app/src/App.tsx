@@ -281,6 +281,11 @@ const updateItems = [
     title: "店舗一覧に累計期待値を追加",
     body: "店舗一覧の各店舗カードで、その店舗の累計期待値も確認できるようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "店舗カードの表示を調整",
+    body: "店舗一覧カード上部の登録店舗・自登録店舗の分類表示を削除し、店舗名から見えるようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -2523,7 +2528,6 @@ export function App() {
                       >
                         <div className="store-card-head">
                           <div>
-                            <p>{store.isRegistered ? "登録店舗" : "自登録店舗"}</p>
                             <h2>{store.name}</h2>
                           </div>
                           <ChevronRight size={18} />

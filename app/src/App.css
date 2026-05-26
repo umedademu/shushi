@@ -895,16 +895,6 @@ h3 {
   gap: 12px;
 }
 
-.store-card-head p {
-  color: #65736f;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.store-card-head h2 {
-  margin-top: 3px;
-}
-
 .store-card-stats,
 .store-summary-grid {
   display: grid;
