@@ -261,6 +261,11 @@ const updateItems = [
     title: "店舗情報画面を追加",
     body: "店舗一覧から店舗ごとの貯玉、収支、過去記録、打った機種を確認し、レートと貯玉を直接編集できるようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "店舗一覧の貯玉表示を調整",
+    body: "店舗一覧と店舗詳細の貯玉表示に、玉数や枚数だけでなく円換算も表示するようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -726,6 +731,16 @@ function rateSavedUnitLabel(kind?: RateKind) {
 
 function rateSavedText(rate: Pick<RateOption, "kind" | "savedCount">) {
   return `${rateSavedLabel()} ${rate.savedCount.toLocaleString("ja-JP")}${rateSavedUnitLabel(rate.kind)}`;
+}
+
+function storeSavedSummaryText(
+  rate: Pick<
+    RateOption,
+    "name" | "kind" | "savedCount" | "exchangeCountPer100Yen" | "unitPrice"
+  >,
+) {
+  const savedValue = Math.round(rate.savedCount * rateUnitValue(rate));
+  return `${rate.name} ${plainSavedCount(rate.savedCount, rate.kind)}（${currency(savedValue)}）`;
 }
 
 function rateSummary(
@@ -1348,7 +1363,7 @@ export function App() {
       const visibleSavedRates = (savedRates.length > 0 ? savedRates : storeRates).slice(0, 3);
       const savedText =
         visibleSavedRates.length > 0
-          ? visibleSavedRates.map((rate) => `${rate.name} ${plainSavedCount(rate.savedCount, rate.kind)}`).join(" / ")
+          ? visibleSavedRates.map((rate) => storeSavedSummaryText(rate)).join(" / ")
           : "貯玉なし";
       const machineGroups = new Map<string, PlayRecord[]>();
       storeRecords.forEach((record) => {
