@@ -127,7 +127,7 @@ Current scope:
 - Favorite stores: stores marked by the user.
 - Registered stores: stores from the app's imported store list.
 - Self-registered stores: stores that appear only in records, rates, or favorites.
-- Store cards show saved balls with yen conversion, monthly profit, total profit, record count, play hours, and the latest play date.
+- Store cards show saved balls with yen conversion, monthly profit, total profit, total expected value, record count, play hours, and the latest play date.
 - The store list shows total saved balls across all stores. Yen conversion is shown as the main value because pachinko balls and slot medals are different units, while the pachinko and slot counts are shown as separate details.
 - Store detail shows rate and saved-ball editing, a button to start a play entry for that store, past play records, and machines played at that store.
 - Rate addition actions live inside the rate and saved-ball section so their purpose is clear.

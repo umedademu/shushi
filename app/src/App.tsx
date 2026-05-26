@@ -276,6 +276,11 @@ const updateItems = [
     title: "全店舗の貯玉合計を追加",
     body: "店舗一覧に、全店舗の貯玉を円換算・パチンコ玉数・スロット枚数で確認できる合計欄を追加しました。",
   },
+  {
+    date: "2026-05-26",
+    title: "店舗一覧に累計期待値を追加",
+    body: "店舗一覧の各店舗カードで、その店舗の累計期待値も確認できるようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -2534,6 +2539,12 @@ export function App() {
                             <dt>累計</dt>
                             <dd className={classForAmount(store.totalProfit)}>
                               {signedCurrency(store.totalProfit)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>累計期待値</dt>
+                            <dd className={classForAmount(store.totalExpectedValue)}>
+                              {signedCurrency(store.totalExpectedValue)}
                             </dd>
                           </div>
                           <div>
