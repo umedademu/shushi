@@ -266,6 +266,11 @@ const updateItems = [
     title: "店舗一覧の貯玉表示を調整",
     body: "店舗一覧と店舗詳細の貯玉表示に、玉数や枚数だけでなく円換算も表示するようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "店舗詳細のレート追加を調整",
+    body: "レート追加ボタンをレートと貯玉の欄へ移し、パチンコのレート追加・スロットのレート追加という文言に変更しました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -2250,14 +2255,6 @@ export function App() {
                   <Pencil size={18} />
                   収支を入力
                 </button>
-                <button className="text-button" type="button" onClick={() => openRateEditor("pachinko", selectedStoreInfo.name)}>
-                  <Plus size={18} />
-                  パチンコ追加
-                </button>
-                <button className="text-button" type="button" onClick={() => openRateEditor("slot", selectedStoreInfo.name)}>
-                  <Plus size={18} />
-                  スロット追加
-                </button>
               </section>
 
               {storeMessage && <p className="store-message">{storeMessage}</p>}
@@ -2269,6 +2266,17 @@ export function App() {
                     <h2>レートと現在の貯玉</h2>
                   </div>
                 </header>
+
+                <div className="store-rate-actions">
+                  <button className="text-button" type="button" onClick={() => openRateEditor("pachinko", selectedStoreInfo.name)}>
+                    <Plus size={18} />
+                    パチンコのレート追加
+                  </button>
+                  <button className="text-button" type="button" onClick={() => openRateEditor("slot", selectedStoreInfo.name)}>
+                    <Plus size={18} />
+                    スロットのレート追加
+                  </button>
+                </div>
 
                 <div className="store-rate-list">
                   {selectedStoreInfo.rates.length === 0 ? (

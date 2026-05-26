@@ -45,3 +45,4 @@
 - Added a store information view with favorite, registered, and self-registered tabs.
 - Added store detail pages where saved-ball counts and rate settings can be edited directly, with past records and played machines shown for that store.
 - Added yen conversion to the saved-ball display in the store list and store detail.
+- Moved the pachinko and slot rate addition buttons into the rate and saved-ball section and clarified their labels.
