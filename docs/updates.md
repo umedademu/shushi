@@ -49,3 +49,4 @@
 - Added a total saved-ball summary to the store list, with yen conversion plus pachinko and slot unit totals.
 - Added total expected value to each store card in the store list.
 - Removed the registered/self-registered label from the top of store cards.
+- Changed the app to a bottom-tab layout with monthly calendar, profit analysis, store information, machine information, and other data operation tabs.

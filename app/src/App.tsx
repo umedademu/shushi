@@ -1,4 +1,21 @@
-import { Check, ChevronLeft, ChevronRight, Download, Pencil, Plus, Search, Star, Trash2, Upload, X } from "lucide-react";
+import {
+  BarChart3,
+  Building2,
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Gamepad2,
+  Pencil,
+  Plus,
+  Search,
+  Settings,
+  Star,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { ChangeEvent, CSSProperties, FormEvent, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { machineOptions, storeOptions } from "./data/catalog";
@@ -74,7 +91,7 @@ type RateSnapshot = Pick<
   | "rateReplayFeePercent"
 >;
 
-type ViewMode = "home" | "updates" | "stores";
+type ViewMode = "home" | "analysis" | "stores" | "machines" | "other" | "updates";
 type OptionField = "storeName" | "machineName";
 type ChartMode = "month" | "year" | "life" | "store" | "machine";
 type StoreTab = "favorite" | "registered" | "custom";
@@ -285,6 +302,11 @@ const updateItems = [
     date: "2026-05-26",
     title: "店舗カードの表示を調整",
     body: "店舗一覧カード上部の登録店舗・自登録店舗の分類表示を削除し、店舗名から見えるようにしました。",
+  },
+  {
+    date: "2026-05-26",
+    title: "下部タブ型の画面構成に変更",
+    body: "画面下にカレンダー、収支分析、店舗情報、機種情報、その他のタブを追加し、グラフやCSV操作を専用画面へ分けました。",
   },
 ];
 
@@ -1453,6 +1475,28 @@ export function App() {
     () => storeInfoList.find((store) => store.name === selectedStoreInfoName) ?? null,
     [selectedStoreInfoName, storeInfoList],
   );
+  const machineInfoList = useMemo(() => {
+    const grouped = new Map<string, PlayRecord[]>();
+    records.forEach((record) => {
+      if (!record.machineName) {
+        return;
+      }
+      grouped.set(record.machineName, [...(grouped.get(record.machineName) ?? []), record]);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([machineName, machineRecords]) => ({
+        count: machineRecords.length,
+        expectedValue: recordsExpectedValue(machineRecords),
+        lastDate: machineRecords
+          .map((record) => record.date)
+          .sort((left, right) => right.localeCompare(left))[0],
+        name: machineName,
+        profit: recordsProfit(machineRecords),
+        storeCount: new Set(machineRecords.map((record) => record.storeName)).size,
+      }))
+      .sort((left, right) => right.lastDate.localeCompare(left.lastDate) || right.count - left.count);
+  }, [records]);
   const storeSavedTotals = useMemo(() => {
     const activeRates = rateOptions.filter((rate) => rate.savedCount !== 0);
     return {
@@ -1657,16 +1701,12 @@ export function App() {
     openRecordEditor(record);
   }
 
-  function openStoreView() {
-    setSelectedStoreInfoName(null);
-    setStoreMessage("");
-    setViewMode("stores");
-  }
-
-  function closeStoreView() {
-    setSelectedStoreInfoName(null);
-    setStoreMessage("");
-    setViewMode("home");
+  function changeMainTab(nextMode: ViewMode) {
+    if (nextMode !== "stores") {
+      setSelectedStoreInfoName(null);
+      setStoreMessage("");
+    }
+    setViewMode(nextMode);
   }
 
   function selectStoreInfo(storeName: string) {
@@ -2202,6 +2242,36 @@ export function App() {
     );
   }
 
+  function renderBottomNav() {
+    const tabs = [
+      {
+        key: "home",
+        label: `${currentMonth.getFullYear()}年${currentMonth.getMonth() + 1}月`,
+        icon: <CalendarDays size={19} />,
+      },
+      { key: "analysis", label: "収支分析", icon: <BarChart3 size={19} /> },
+      { key: "stores", label: "店舗情報", icon: <Building2 size={19} /> },
+      { key: "machines", label: "機種情報", icon: <Gamepad2 size={19} /> },
+      { key: "other", label: "その他", icon: <Settings size={19} /> },
+    ];
+
+    return (
+      <nav className="bottom-tabs" aria-label="画面切り替え">
+        {tabs.map((tab) => (
+          <button
+            className={`bottom-tab ${viewMode === tab.key ? "is-active" : ""}`}
+            key={tab.key}
+            type="button"
+            onClick={() => changeMainTab(tab.key as ViewMode)}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </nav>
+    );
+  }
+
   if (viewMode === "stores") {
     const tabCounts = {
       favorite: storeInfoList.filter((store) => store.isFavorite).length,
@@ -2213,9 +2283,13 @@ export function App() {
       <main className="app-shell">
         <section className="phone-frame store-frame">
           <header className="top-bar">
-            <button className="icon-button" type="button" onClick={closeStoreView} title="戻る">
-              <ChevronLeft size={20} />
-            </button>
+            {selectedStoreInfo ? (
+              <button className="icon-button" type="button" onClick={closeStoreDetail} title="一覧へ戻る">
+                <ChevronLeft size={20} />
+              </button>
+            ) : (
+              <div className="top-spacer" />
+            )}
             <div>
               <p className="eyebrow">店舗情報</p>
               <h1>{selectedStoreInfo ? selectedStoreInfo.name : "店舗一覧"}</h1>
@@ -2581,6 +2655,7 @@ export function App() {
           )}
 
           {isRateEditorOpen && renderRateEditorDialog()}
+          {renderBottomNav()}
         </section>
       </main>
     );
@@ -2591,7 +2666,7 @@ export function App() {
       <main className="app-shell">
         <section className="phone-frame">
           <header className="top-bar">
-            <button className="icon-button" type="button" onClick={() => setViewMode("home")} title="戻る">
+            <button className="icon-button" type="button" onClick={() => setViewMode("other")} title="戻る">
               <ChevronLeft size={20} />
             </button>
             <div>
@@ -2618,6 +2693,7 @@ export function App() {
   return (
     <main className="app-shell">
       <section className="phone-frame dashboard-frame">
+        {viewMode === "home" && (
         <div className="dashboard-left">
           <header className="top-bar">
             <div>
@@ -2688,8 +2764,40 @@ export function App() {
             </div>
           </section>
         </div>
+        )}
 
         <div className="dashboard-right">
+        {viewMode === "analysis" && (
+          <header className="top-bar">
+            <div>
+              <p className="eyebrow">分析</p>
+              <h1>収支分析</h1>
+            </div>
+            <div className="top-spacer" />
+          </header>
+        )}
+
+        {viewMode === "machines" && (
+          <header className="top-bar">
+            <div>
+              <p className="eyebrow">機種情報</p>
+              <h1>機種一覧</h1>
+            </div>
+            <div className="top-spacer" />
+          </header>
+        )}
+
+        {viewMode === "other" && (
+          <header className="top-bar">
+            <div>
+              <p className="eyebrow">その他</p>
+              <h1>データ操作</h1>
+            </div>
+            <div className="top-spacer" />
+          </header>
+        )}
+
+        {viewMode === "home" && (
         <section className="summary-grid">
           <div>
             <span>収支</span>
@@ -2714,7 +2822,9 @@ export function App() {
             <strong>{selectedHours.toFixed(1)}時間</strong>
           </div>
         </section>
+        )}
 
+        {viewMode === "analysis" && (
         <section className="chart-panel">
           <header className="chart-header">
             <div>
@@ -2955,7 +3065,9 @@ export function App() {
             </>
           )}
         </section>
+        )}
 
+        {viewMode === "other" && (
         <section className="csv-panel">
           <div className="csv-buttons">
             <button className="text-button" type="button" onClick={() => csvInputRef.current?.click()}>
@@ -2970,10 +3082,6 @@ export function App() {
               <Pencil size={18} />
               一括編集
             </button>
-            <button className="text-button" type="button" onClick={openStoreView}>
-              <Search size={18} />
-              店舗情報
-            </button>
           </div>
           <input
             ref={csvInputRef}
@@ -2984,7 +3092,47 @@ export function App() {
           />
           {csvMessage && <p>{csvMessage}</p>}
         </section>
+        )}
 
+        {viewMode === "machines" && (
+        <section className="store-section">
+          <header className="store-section-head">
+            <div>
+              <p className="eyebrow">機種情報</p>
+              <h2>打った機種</h2>
+            </div>
+          </header>
+
+          <div className="store-machine-list">
+            {machineInfoList.length === 0 ? (
+              <div className="empty-state">
+                <p>機種の記録はまだありません。</p>
+              </div>
+            ) : (
+              machineInfoList.map((machine) => (
+                <article className="store-machine-row" key={machine.name}>
+                  <div>
+                    <strong>{machine.name}</strong>
+                    <span>
+                      {machine.count}件 / {machine.storeCount}店舗 / 最終 {machine.lastDate}
+                    </span>
+                  </div>
+                  <div>
+                    <strong className={classForAmount(machine.profit)}>
+                      {signedCurrency(machine.profit)}
+                    </strong>
+                    <span className={classForAmount(machine.expectedValue)}>
+                      期待値 {signedCurrency(machine.expectedValue)}
+                    </span>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+        )}
+
+        {viewMode === "home" && (
         <section className="record-list">
           {selectedRecords.length === 0 ? (
             <div className="empty-state">
@@ -3071,11 +3219,15 @@ export function App() {
             ))
           )}
         </section>
+        )}
 
+        {viewMode === "other" && (
         <button className="updates-button" type="button" onClick={() => setViewMode("updates")}>
           更新情報を見る
         </button>
+        )}
         </div>
+        {renderBottomNav()}
       </section>
 
       {isBulkEditorOpen && (

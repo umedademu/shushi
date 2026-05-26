@@ -54,6 +54,17 @@ Implemented draft behavior:
 - Show a saved-ball total across all stores on the store list, including yen conversion, pachinko count, and slot count.
 - Open a store detail view to edit rate settings, directly update saved-ball counts, start a new play entry for that store, review past records, and review machines played at that store.
 - Place rate addition buttons inside the store detail rate and saved-ball section, with labels that clearly say they add pachinko or slot rates.
+- Use bottom tabs for the main app areas: monthly calendar, profit analysis, store information, machine information, and other data operations.
+
+## Main Layout
+
+The main app is split into five bottom tabs:
+
+- Monthly calendar: selected month calendar, selected-day summary, and selected-day play records.
+- Profit analysis: the profit chart views.
+- Store information: store list, store detail, rate settings, and saved-ball management.
+- Machine information: machines played, grouped by machine name.
+- Other: CSV import, CSV export, bulk editing, and update information.
 
 ## Saved Fields
 
@@ -81,7 +92,7 @@ Cash profit, saved-ball change, total profit, and play time are calculated from 
 
 ## Charts
 
-The home screen includes a line-style profit chart with five views:
+The profit analysis tab includes a line-style profit chart with five views:
 
 - Monthly view: cumulative daily profit for the displayed month.
 - Yearly view: cumulative monthly profit for the displayed year.
