@@ -318,6 +318,11 @@ const updateItems = [
     title: "収支グラフに実収支の棒を追加",
     body: "月別、年別、生涯の収支グラフで、累計収支の折れ線に加えて期間ごとの実収支を棒で重ねて見られるようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "収支グラフの成績表示を強化",
+    body: "グラフの右側に円目盛りを出し、月別では10日・20日・30日の目安線を追加しました。さらに回数、勝率、投資、回収、時給などの成績欄も確認できるようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -338,9 +343,9 @@ const chartSvgWidth = 360;
 const chartSvgHeight = 190;
 const chartPadding = {
   top: 18,
-  right: 16,
+  right: 58,
   bottom: 24,
-  left: 44,
+  left: 18,
 };
 
 function pad(value: number) {
@@ -578,6 +583,14 @@ function profit(
   return Math.round(cashProfit + savedValue);
 }
 
+function recordInvestmentValue(record: PlayRecord) {
+  return Math.round(record.investment + (record.savedInvestment ?? 0) * savedUnitValue(record));
+}
+
+function recordRecoveryValue(record: PlayRecord) {
+  return Math.round(record.recovery + (record.savedRecovery ?? 0) * savedUnitValue(record));
+}
+
 function savedUnitLabel(kind?: RateKind | "mixed" | null) {
   if (kind === "slot") {
     return "枚";
@@ -633,6 +646,19 @@ function recordsProfit(records: PlayRecord[]) {
 
 function recordsExpectedValue(records: PlayRecord[]) {
   return records.reduce((total, record) => total + record.expectedValue, 0);
+}
+
+function chartRecordsForMode(records: PlayRecord[], mode: ChartMode, date: Date) {
+  if (mode === "month") {
+    const prefix = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-`;
+    return records.filter((record) => record.date.startsWith(prefix));
+  }
+
+  if (mode === "year") {
+    return records.filter((record) => record.date.startsWith(`${date.getFullYear()}-`));
+  }
+
+  return records;
 }
 
 function chartPoint(key: string, label: string, records: PlayRecord[]): ChartPoint {
@@ -1218,6 +1244,55 @@ export function App() {
     const total = activePoints.reduce((sum, point) => sum + point.value, 0);
     const expectedTotal = activePoints.reduce((sum, point) => sum + point.expectedValue, 0);
     const count = activePoints.reduce((sum, point) => sum + point.count, 0);
+    const statsRecords = chartRecordsForMode(records, chartMode, currentMonth);
+    const statsResults = statsRecords.map((record) => profit(record));
+    const statsCount = statsRecords.length;
+    const statsTotal = statsResults.reduce((sum, value) => sum + value, 0);
+    const statsHours = statsRecords.reduce(
+      (sum, record) => sum + durationHours(record.startTime, record.endTime),
+      0,
+    );
+    const statsTitle =
+      chartMode === "month"
+        ? `${monthLabel(currentMonth)}の成績`
+        : chartMode === "year"
+          ? `${year}年の成績`
+          : chartMode === "life"
+            ? "生涯の成績"
+            : chartMode === "store"
+              ? "全店舗の成績"
+              : "全機種の成績";
+    const stats = {
+      averageProfit: statsCount ? statsTotal / statsCount : 0,
+      count: statsCount,
+      drawCount: statsResults.filter((value) => value === 0).length,
+      expectedAverage: statsCount ? recordsExpectedValue(statsRecords) / statsCount : 0,
+      expectedTotal: recordsExpectedValue(statsRecords),
+      hourlyProfit: statsHours > 0 ? statsTotal / statsHours : 0,
+      hours: statsHours,
+      loseCount: statsResults.filter((value) => value < 0).length,
+      maxInvestment: statsRecords.reduce(
+        (max, record) => Math.max(max, recordInvestmentValue(record)),
+        0,
+      ),
+      maxRecovery: statsRecords.reduce(
+        (max, record) => Math.max(max, recordRecoveryValue(record)),
+        0,
+      ),
+      title: statsTitle,
+      totalInvestment: statsRecords.reduce(
+        (sum, record) => sum + recordInvestmentValue(record),
+        0,
+      ),
+      totalRecovery: statsRecords.reduce(
+        (sum, record) => sum + recordRecoveryValue(record),
+        0,
+      ),
+      winCount: statsResults.filter((value) => value > 0).length,
+      winRate: statsCount
+        ? (statsResults.filter((value) => value > 0).length / statsCount) * 100
+        : 0,
+    };
     let runningTotal = 0;
     let runningExpectedTotal = 0;
     const linePoints = points
@@ -1272,6 +1347,7 @@ export function App() {
       plotMax,
       plotMin,
       points,
+      stats,
       title: chartTitle,
       total,
       worst,
@@ -1294,6 +1370,16 @@ export function App() {
         x,
         y: toY(point.plotValue),
       };
+    });
+    const guideCoordinates = coordinates.filter((point) => {
+      const pointNumber = Number(point.label.replace(/\D/g, ""));
+      if (chartMode === "month") {
+        return [10, 20, 30].includes(pointNumber);
+      }
+      if (chartMode === "year") {
+        return [3, 6, 9, 12].includes(pointNumber);
+      }
+      return false;
     });
     const linePath = chartPointPath(coordinates);
     const expectedLinePath = chartPointPath(
@@ -1328,8 +1414,16 @@ export function App() {
         ? `${linePath} L ${coordinates[coordinates.length - 1].x} ${zeroY} L ${coordinates[0].x} ${zeroY} Z`
         : "";
 
-    return { areaPath, barCoordinates, coordinates, expectedLinePath, linePath, zeroY };
-  }, [chartData]);
+    return {
+      areaPath,
+      barCoordinates,
+      coordinates,
+      expectedLinePath,
+      guideCoordinates,
+      linePath,
+      zeroY,
+    };
+  }, [chartData, chartMode]);
   const filteredOptions = useMemo(() => {
     if (!selectorField) {
       return [];
@@ -2956,6 +3050,16 @@ export function App() {
                         y1={chartSvgHeight - chartPadding.bottom}
                         y2={chartSvgHeight - chartPadding.bottom}
                       />
+                      {chartGeometry.guideCoordinates.map((point) => (
+                        <line
+                          className="chart-guide-line"
+                          key={`${point.key}-guide`}
+                          x1={point.x}
+                          x2={point.x}
+                          y1={chartPadding.top}
+                          y2={chartSvgHeight - chartPadding.bottom}
+                        />
+                      ))}
                       <line
                         className="chart-zero-line"
                         x1={chartPadding.left}
@@ -2963,10 +3067,28 @@ export function App() {
                         y1={chartGeometry.zeroY}
                         y2={chartGeometry.zeroY}
                       />
-                      <text className="chart-y-label" x={4} y={chartPadding.top + 4}>
+                      <text
+                        className="chart-y-label"
+                        textAnchor="end"
+                        x={chartSvgWidth - 4}
+                        y={chartPadding.top + 4}
+                      >
                         {signedCurrency(Math.round(chartData.plotMax))}
                       </text>
-                      <text className="chart-y-label" x={4} y={chartSvgHeight - chartPadding.bottom + 4}>
+                      <text
+                        className="chart-y-label chart-zero-label"
+                        textAnchor="end"
+                        x={chartSvgWidth - 4}
+                        y={chartGeometry.zeroY + 4}
+                      >
+                        0円
+                      </text>
+                      <text
+                        className="chart-y-label"
+                        textAnchor="end"
+                        x={chartSvgWidth - 4}
+                        y={chartSvgHeight - chartPadding.bottom + 4}
+                      >
                         {signedCurrency(Math.round(chartData.plotMin))}
                       </text>
                       {chartGeometry.areaPath && (
@@ -3023,10 +3145,81 @@ export function App() {
                         ))}
                     </svg>
                     <div className="chart-axis-labels">
-                      <span>{chartData.linePoints[0]?.label ?? ""}</span>
-                      <span>{chartData.linePoints[chartData.linePoints.length - 1]?.label ?? ""}</span>
+                      {chartGeometry.guideCoordinates.length > 0 ? (
+                        chartGeometry.guideCoordinates.map((point) => (
+                          <span key={`${point.key}-axis`}>{point.label}</span>
+                        ))
+                      ) : (
+                        <>
+                          <span>{chartData.linePoints[0]?.label ?? ""}</span>
+                          <span>{chartData.linePoints[chartData.linePoints.length - 1]?.label ?? ""}</span>
+                        </>
+                      )}
                     </div>
                   </div>
+
+                  <section className="chart-score-panel">
+                    <header className="chart-score-head">
+                      <h3>{chartData.stats.title}</h3>
+                      <strong className={classForAmount(chartData.stats.averageProfit)}>
+                        平均 {signedCurrency(Math.round(chartData.stats.averageProfit))}
+                      </strong>
+                    </header>
+                    <div className="chart-score-grid">
+                      <div>
+                        <span>回数</span>
+                        <strong>{chartData.stats.count}回</strong>
+                      </div>
+                      <div>
+                        <span>勝率</span>
+                        <strong>{chartData.stats.winRate.toFixed(1)}%</strong>
+                      </div>
+                      <div>
+                        <span>勝数</span>
+                        <strong>{chartData.stats.winCount}回</strong>
+                      </div>
+                      <div>
+                        <span>負数</span>
+                        <strong>{chartData.stats.loseCount}回</strong>
+                      </div>
+                      <div>
+                        <span>引分</span>
+                        <strong>{chartData.stats.drawCount}回</strong>
+                      </div>
+                      <div>
+                        <span>時間</span>
+                        <strong>{chartData.stats.hours.toFixed(1)}時間</strong>
+                      </div>
+                      <div>
+                        <span>投資合計</span>
+                        <strong>{currency(chartData.stats.totalInvestment)}</strong>
+                      </div>
+                      <div>
+                        <span>回収合計</span>
+                        <strong>{currency(chartData.stats.totalRecovery)}</strong>
+                      </div>
+                      <div>
+                        <span>最高投資</span>
+                        <strong>{currency(chartData.stats.maxInvestment)}</strong>
+                      </div>
+                      <div>
+                        <span>最高回収</span>
+                        <strong>{currency(chartData.stats.maxRecovery)}</strong>
+                      </div>
+                      <div>
+                        <span>時給</span>
+                        <strong className={classForAmount(chartData.stats.hourlyProfit)}>
+                          {signedCurrency(Math.round(chartData.stats.hourlyProfit))}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>期待値平均</span>
+                        <strong className={classForAmount(chartData.stats.expectedAverage)}>
+                          {signedCurrency(Math.round(chartData.stats.expectedAverage))}
+                        </strong>
+                      </div>
+                    </div>
+                  </section>
 
                   <div className="chart-list">
                     {chartData.points.map((point) => {

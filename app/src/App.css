@@ -506,6 +506,63 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.chart-score-panel {
+  margin-top: 12px;
+}
+
+.chart-score-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chart-score-head h3 {
+  font-size: 17px;
+}
+
+.chart-score-head strong {
+  flex: 0 0 auto;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.chart-score-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 8px;
+  margin-top: 10px;
+}
+
+.chart-score-grid div {
+  min-width: 0;
+  min-height: 42px;
+  border-radius: 8px;
+  background: #f1f3f6;
+  display: grid;
+  grid-template-columns: minmax(54px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.chart-score-grid span {
+  color: #75807f;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.chart-score-grid strong {
+  min-width: 0;
+  color: #101817;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 .chart-line-wrap,
 .chart-bar-wrap {
   margin-top: 12px;
@@ -531,16 +588,25 @@ h3 {
   stroke: #e8efec;
 }
 
+.chart-guide-line {
+  stroke: #cbd8d4;
+  stroke-dasharray: 4 5;
+  stroke-width: 1;
+}
+
 .chart-zero-line {
   stroke: #91a19c;
-  stroke-dasharray: 3 5;
-  stroke-width: 1;
+  stroke-width: 1.4;
 }
 
 .chart-y-label {
   fill: #72807c;
   font-size: 9px;
   font-weight: 800;
+}
+
+.chart-zero-label {
+  fill: #5f6e6a;
 }
 
 .chart-line-area {
@@ -615,7 +681,7 @@ h3 {
 
 .chart-axis-labels {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
   gap: 8px;
   margin-top: 4px;
   color: #72807c;
@@ -625,10 +691,11 @@ h3 {
 
 .chart-axis-labels span {
   min-width: 0;
-  max-width: 48%;
+  max-width: 33%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: center;
 }
 
 .chart-list {
