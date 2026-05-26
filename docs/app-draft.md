@@ -108,7 +108,7 @@ The monthly chart uses the same displayed month as the main calendar. Moving the
 
 Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right. Trend charts use right-side yen scale labels and guide lines so the current result is easier to read against the zero line. The graph keeps only a compact legend below the chart and does not show highest or lowest cards above it. In the store and machine views, the row label, bar area, and amount are separated so long positive or negative bars do not cover text.
 
-Under the trend chart, the app shows a pRecord-style performance summary for the current range. The heading shows the main period result, while the summary includes play count, win rate, wins, losses, draws, play hours, total investment, total recovery, highest investment, highest recovery, average amount, saved-ball totals, hourly profit, expected value input count, expected value total, and expected value average.
+Under the trend chart, the app shows a pRecord-style performance summary for the current range. The heading shows the main period result with the yen unit, while the summary includes play count, win rate, wins, losses, draws, play hours, total investment, total recovery, highest investment, highest recovery, average amount, saved-ball totals, hourly profit, expected value input count, expected value total, and expected value average.
 
 ## Rate Settings
 

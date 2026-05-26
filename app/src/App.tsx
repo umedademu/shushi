@@ -333,6 +333,11 @@ const updateItems = [
     title: "月別グラフの見出しを年月表示に変更",
     body: "月別の収支グラフと成績の見出しを、今月ではなく2026年05月のような年月表示に変更し、収支分析画面上部の重複見出しも削除しました。",
   },
+  {
+    date: "2026-05-26",
+    title: "成績の大きな収支に円を表示",
+    body: "収支分析の成績見出し横に出る大きな収支額にも、+440,215円のように円を付けて表示するようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -2775,7 +2780,7 @@ export function App() {
         <header className="chart-score-head">
           <h3>{chartData.stats.title}</h3>
           <strong className={classForAmount(chartData.stats.totalProfit)}>
-            {signedCurrency(chartData.stats.totalProfit).replace("円", "")}
+            {signedCurrency(chartData.stats.totalProfit)}
           </strong>
         </header>
         <div className="chart-score-grid">
