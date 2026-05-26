@@ -54,3 +54,4 @@
 - Added actual profit bars to monthly, yearly, and lifetime charts so each period's result can be compared against the cumulative profit line.
 - Added pRecord-style chart details: right-side yen scale labels, guide lines for monthly and yearly trend charts, and a period performance summary with counts, win rate, investment, recovery, hourly profit, and expected value average.
 - Simplified the profit analysis screen toward pRecord's layout by removing the amount-heavy legend and highest/lowest cards, then showing the main period result beside the performance heading with average amount and expected value totals inside the summary.
+- Changed monthly chart and performance headings from "this month" wording to numeric year-month labels, kept the performance heading visible on empty months, and removed duplicated analysis headings above the chart.

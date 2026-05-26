@@ -328,6 +328,11 @@ const updateItems = [
     title: "収支分析をpRecord風に整理",
     body: "グラフ上の金額付き凡例と最高・最低カードをなくし、グラフ下に今月の成績と大きな合計収支、平均額や期待値合計を含む成績表を表示する形にしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "月別グラフの見出しを年月表示に変更",
+    body: "月別の収支グラフと成績の見出しを、今月ではなく2026年05月のような年月表示に変更し、収支分析画面上部の重複見出しも削除しました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -373,6 +378,10 @@ function currentTimeKey() {
 
 function monthLabel(date: Date) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+}
+
+function numericMonthLabel(date: Date) {
+  return `${date.getFullYear()}年${pad(date.getMonth() + 1)}月`;
 }
 
 function currency(value: number) {
@@ -1220,7 +1229,7 @@ export function App() {
     const isTrend = chartMode === "month" || chartMode === "year" || chartMode === "life";
     const chartTitle =
       chartMode === "month"
-        ? "今月の収支グラフ"
+        ? `${numericMonthLabel(currentMonth)}の収支グラフ`
         : chartMode === "year"
           ? `${year}年の累計収支`
           : chartMode === "life"
@@ -1253,7 +1262,7 @@ export function App() {
     );
     const statsTitle =
       chartMode === "month"
-        ? "今月の成績"
+        ? `${numericMonthLabel(currentMonth)}の成績`
         : chartMode === "year"
           ? `${year}年の成績`
           : chartMode === "life"
@@ -2760,6 +2769,113 @@ export function App() {
     );
   }
 
+  function renderChartScorePanel() {
+    return (
+      <section className="chart-score-panel">
+        <header className="chart-score-head">
+          <h3>{chartData.stats.title}</h3>
+          <strong className={classForAmount(chartData.stats.totalProfit)}>
+            {signedCurrency(chartData.stats.totalProfit).replace("円", "")}
+          </strong>
+        </header>
+        <div className="chart-score-grid">
+          <div>
+            <span>回数</span>
+            <strong>{chartData.stats.count}回</strong>
+          </div>
+          <div>
+            <span>投資合計</span>
+            <strong>{currency(chartData.stats.totalInvestment)}</strong>
+          </div>
+          <div>
+            <span>勝数</span>
+            <strong>{chartData.stats.winCount}回</strong>
+          </div>
+          <div>
+            <span>回収合計</span>
+            <strong>{currency(chartData.stats.totalRecovery)}</strong>
+          </div>
+          <div>
+            <span>負数</span>
+            <strong>{chartData.stats.loseCount}回</strong>
+          </div>
+          <div>
+            <span>平均額</span>
+            <strong className={classForAmount(chartData.stats.averageProfit)}>
+              {signedCurrency(Math.round(chartData.stats.averageProfit))}
+            </strong>
+          </div>
+          <div>
+            <span>引分</span>
+            <strong>{chartData.stats.drawCount}回</strong>
+          </div>
+          <div>
+            <span>最高投資</span>
+            <strong>{currency(chartData.stats.maxInvestment)}</strong>
+          </div>
+          <div>
+            <span>勝率</span>
+            <strong>{chartData.stats.winRate.toFixed(1)}%</strong>
+          </div>
+          <div>
+            <span>最高回収</span>
+            <strong>{currency(chartData.stats.maxRecovery)}</strong>
+          </div>
+          <div>
+            <span>時間</span>
+            <strong>{chartData.stats.hours.toFixed(1)}時間</strong>
+          </div>
+          <div>
+            <span>時給</span>
+            <strong className={classForAmount(chartData.stats.hourlyProfit)}>
+              {signedCurrency(Math.round(chartData.stats.hourlyProfit))}
+            </strong>
+          </div>
+          <div>
+            <span>貯玉合計</span>
+            <strong className={classForAmount(chartData.stats.savedProfit)}>
+              {savedCount(chartData.stats.savedProfit, chartData.stats.savedUnitKind)}
+            </strong>
+          </div>
+          <div>
+            <span>貯玉換算</span>
+            <strong className={classForAmount(chartData.stats.savedValue)}>
+              {signedCurrency(chartData.stats.savedValue)}
+            </strong>
+          </div>
+          <div>
+            <span>期待値勝数</span>
+            <strong>{chartData.stats.expectedWinCount}回</strong>
+          </div>
+          <div>
+            <span>期待値入力</span>
+            <strong>{chartData.stats.expectedInputCount}回</strong>
+          </div>
+          <div>
+            <span>期待値負数</span>
+            <strong>{chartData.stats.expectedLoseCount}回</strong>
+          </div>
+          <div>
+            <span>期待値合計</span>
+            <strong className={classForAmount(chartData.stats.expectedTotal)}>
+              {signedCurrency(chartData.stats.expectedTotal)}
+            </strong>
+          </div>
+          <div>
+            <span>期待値引分</span>
+            <strong>{chartData.stats.expectedDrawCount}回</strong>
+          </div>
+          <div>
+            <span>期待値平均</span>
+            <strong className={classForAmount(chartData.stats.expectedAverage)}>
+              {signedCurrency(Math.round(chartData.stats.expectedAverage))}
+            </strong>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   if (viewMode === "updates") {
     return (
       <main className="app-shell">
@@ -2866,16 +2982,6 @@ export function App() {
         )}
 
         <div className="dashboard-right">
-        {viewMode === "analysis" && (
-          <header className="top-bar">
-            <div>
-              <p className="eyebrow">分析</p>
-              <h1>収支分析</h1>
-            </div>
-            <div className="top-spacer" />
-          </header>
-        )}
-
         {viewMode === "machines" && (
           <header className="top-bar">
             <div>
@@ -2925,13 +3031,6 @@ export function App() {
 
         {viewMode === "analysis" && (
         <section className="chart-panel">
-          <header className="chart-header">
-            <div>
-              <p className="eyebrow">分析</p>
-              <h2>収支グラフ</h2>
-            </div>
-          </header>
-
           <div className="chart-tabs" aria-label="収支グラフの切り替え">
             {chartModes.map((mode) => (
               <button
@@ -2974,7 +3073,10 @@ export function App() {
           </div>
 
           {chartData.count === 0 ? (
-            <div className="chart-empty">表示できる記録がありません。</div>
+            <>
+              <div className="chart-empty">表示できる記録がありません。</div>
+              {chartData.isTrend && renderChartScorePanel()}
+            </>
           ) : (
             <>
               {chartData.isTrend ? (
@@ -3122,108 +3224,7 @@ export function App() {
                     </div>
                   </div>
 
-                  <section className="chart-score-panel">
-                    <header className="chart-score-head">
-                      <h3>{chartData.stats.title}</h3>
-                      <strong className={classForAmount(chartData.stats.totalProfit)}>
-                        {signedCurrency(chartData.stats.totalProfit).replace("円", "")}
-                      </strong>
-                    </header>
-                    <div className="chart-score-grid">
-                      <div>
-                        <span>回数</span>
-                        <strong>{chartData.stats.count}回</strong>
-                      </div>
-                      <div>
-                        <span>投資合計</span>
-                        <strong>{currency(chartData.stats.totalInvestment)}</strong>
-                      </div>
-                      <div>
-                        <span>勝数</span>
-                        <strong>{chartData.stats.winCount}回</strong>
-                      </div>
-                      <div>
-                        <span>回収合計</span>
-                        <strong>{currency(chartData.stats.totalRecovery)}</strong>
-                      </div>
-                      <div>
-                        <span>負数</span>
-                        <strong>{chartData.stats.loseCount}回</strong>
-                      </div>
-                      <div>
-                        <span>平均額</span>
-                        <strong className={classForAmount(chartData.stats.averageProfit)}>
-                          {signedCurrency(Math.round(chartData.stats.averageProfit))}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>引分</span>
-                        <strong>{chartData.stats.drawCount}回</strong>
-                      </div>
-                      <div>
-                        <span>最高投資</span>
-                        <strong>{currency(chartData.stats.maxInvestment)}</strong>
-                      </div>
-                      <div>
-                        <span>勝率</span>
-                        <strong>{chartData.stats.winRate.toFixed(1)}%</strong>
-                      </div>
-                      <div>
-                        <span>最高回収</span>
-                        <strong>{currency(chartData.stats.maxRecovery)}</strong>
-                      </div>
-                      <div>
-                        <span>時間</span>
-                        <strong>{chartData.stats.hours.toFixed(1)}時間</strong>
-                      </div>
-                      <div>
-                        <span>時給</span>
-                        <strong className={classForAmount(chartData.stats.hourlyProfit)}>
-                          {signedCurrency(Math.round(chartData.stats.hourlyProfit))}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>貯玉合計</span>
-                        <strong className={classForAmount(chartData.stats.savedProfit)}>
-                          {savedCount(chartData.stats.savedProfit, chartData.stats.savedUnitKind)}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>貯玉換算</span>
-                        <strong className={classForAmount(chartData.stats.savedValue)}>
-                          {signedCurrency(chartData.stats.savedValue)}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>期待値勝数</span>
-                        <strong>{chartData.stats.expectedWinCount}回</strong>
-                      </div>
-                      <div>
-                        <span>期待値入力</span>
-                        <strong>{chartData.stats.expectedInputCount}回</strong>
-                      </div>
-                      <div>
-                        <span>期待値負数</span>
-                        <strong>{chartData.stats.expectedLoseCount}回</strong>
-                      </div>
-                      <div>
-                        <span>期待値合計</span>
-                        <strong className={classForAmount(chartData.stats.expectedTotal)}>
-                          {signedCurrency(chartData.stats.expectedTotal)}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>期待値引分</span>
-                        <strong>{chartData.stats.expectedDrawCount}回</strong>
-                      </div>
-                      <div>
-                        <span>期待値平均</span>
-                        <strong className={classForAmount(chartData.stats.expectedAverage)}>
-                          {signedCurrency(Math.round(chartData.stats.expectedAverage))}
-                        </strong>
-                      </div>
-                    </div>
-                  </section>
+                  {renderChartScorePanel()}
 
                   <div className="chart-list">
                     {chartData.points.map((point) => {

@@ -58,6 +58,7 @@ Implemented draft behavior:
 - Use bottom tabs for the main app areas: monthly calendar, profit analysis, store information, machine information, and other data operations.
 - Add actual profit bars on top of the monthly, yearly, and lifetime chart views, while keeping cumulative profit and expected value as lines.
 - Show pRecord-style chart helpers: right-side yen scale labels, guide lines, a simple graph legend, and a performance summary for the current chart range.
+- Show monthly chart and performance headings as numeric year-month labels such as 2026年05月, and keep the profit analysis view free of duplicated top headings.
 
 ## Main Layout
 
@@ -103,7 +104,7 @@ The profit analysis tab includes a line-style profit chart with five views:
 - Store view: profit grouped by store in a horizontal bar list.
 - Machine view: profit grouped by machine in a horizontal bar list.
 
-The monthly chart uses the same displayed month as the main calendar. Moving the month from either place updates both sections. Monthly, yearly, and lifetime charts also show actual profit bars for each period: daily bars in monthly view, monthly bars in yearly view, and yearly bars in lifetime view.
+The monthly chart uses the same displayed month as the main calendar. Moving the month from either place updates both sections, and the monthly chart and performance headings show the selected month as a numeric label such as 2026年05月 even when the selected month has no records. Monthly, yearly, and lifetime charts also show actual profit bars for each period: daily bars in monthly view, monthly bars in yearly view, and yearly bars in lifetime view.
 
 Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right. Trend charts use right-side yen scale labels and guide lines so the current result is easier to read against the zero line. The graph keeps only a compact legend below the chart and does not show highest or lowest cards above it. In the store and machine views, the row label, bar area, and amount are separated so long positive or negative bars do not cover text.
 
