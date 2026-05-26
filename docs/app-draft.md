@@ -56,6 +56,7 @@ Implemented draft behavior:
 - Open a store detail view to edit rate settings, directly update saved-ball counts, start a new play entry for that store, review past records, and review machines played at that store.
 - Place rate addition buttons inside the store detail rate and saved-ball section, with labels that clearly say they add pachinko or slot rates.
 - Use bottom tabs for the main app areas: monthly calendar, profit analysis, store information, machine information, and other data operations.
+- Add actual profit bars on top of the monthly, yearly, and lifetime chart views, while keeping cumulative profit and expected value as lines.
 
 ## Main Layout
 
@@ -101,7 +102,7 @@ The profit analysis tab includes a line-style profit chart with five views:
 - Store view: profit grouped by store in a horizontal bar list.
 - Machine view: profit grouped by machine in a horizontal bar list.
 
-The monthly chart uses the same displayed month as the main calendar. Moving the month from either place updates both sections.
+The monthly chart uses the same displayed month as the main calendar. Moving the month from either place updates both sections. Monthly, yearly, and lifetime charts also show actual profit bars for each period: daily bars in monthly view, monthly bars in yearly view, and yearly bars in lifetime view.
 
 Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right. In the store and machine views, the row label, bar area, and amount are separated so long positive or negative bars do not cover text.
 

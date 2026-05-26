@@ -313,6 +313,11 @@ const updateItems = [
     title: "折れ線グラフの見た目を調整",
     body: "収支分析の折れ線を細くし、稼働がない日の点を表示しないようにして、グラフをすっきり見せるようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "収支グラフに実収支の棒を追加",
+    body: "月別、年別、生涯の収支グラフで、累計収支の折れ線に加えて期間ごとの実収支を棒で重ねて見られるようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -1226,7 +1231,11 @@ export function App() {
         };
       })
       .filter((point) => isTrend || point.count > 0);
-    const plotValues = linePoints.flatMap((point) => [point.plotValue, point.expectedPlotValue]);
+    const plotValues = linePoints.flatMap((point) =>
+      isTrend
+        ? [point.plotValue, point.expectedPlotValue, point.value]
+        : [point.plotValue, point.expectedPlotValue],
+    );
     const rawMin = Math.min(0, ...plotValues);
     const rawMax = Math.max(0, ...plotValues);
     const rangePadding = rawMin === rawMax ? 1000 : (rawMax - rawMin) * 0.12;
@@ -1294,30 +1303,24 @@ export function App() {
       })),
     );
     const zeroY = toY(0);
-    const step = coordinates.length > 0 ? innerWidth / coordinates.length : innerWidth;
-    const barWidth = Math.min(18, Math.max(8, step * 0.32));
-    const barGap = Math.min(5, Math.max(2, step * 0.08));
-    const barCoordinates = coordinates.map((point, index) => {
-      const valueY = toY(point.plotValue);
-      const expectedY = toY(point.expectedPlotValue);
-      const isEven = point.plotValue === 0;
-      const expectedIsEven = point.expectedPlotValue === 0;
+    const step =
+      coordinates.length > 1 ? innerWidth / (coordinates.length - 1) : innerWidth;
+    const barWidth = Math.min(16, Math.max(4, step * 0.46));
+    const barCoordinates = coordinates.map((point) => {
+      const valueY = toY(point.value);
+      const isEven = point.value === 0;
       const height = isEven ? 2 : Math.abs(valueY - zeroY);
-      const expectedHeight = expectedIsEven ? 2 : Math.abs(expectedY - zeroY);
       const y = isEven ? zeroY - 1 : Math.min(valueY, zeroY);
-      const expectedBarY = expectedIsEven ? zeroY - 1 : Math.min(expectedY, zeroY);
-      const groupWidth = barWidth * 2 + barGap;
-      const groupX = chartPadding.left + step * index + (step - groupWidth) / 2;
+      const minX = chartPadding.left;
+      const maxX = chartSvgWidth - chartPadding.right - barWidth;
+      const x = Math.min(maxX, Math.max(minX, point.x - barWidth / 2));
 
       return {
         ...point,
         barHeight: height,
         barWidth,
-        barX: groupX,
+        barX: x,
         barY: y,
-        expectedBarHeight: expectedHeight,
-        expectedBarX: groupX + barWidth + barGap,
-        expectedBarY,
       };
     });
     const areaPath =
@@ -2884,16 +2887,23 @@ export function App() {
           </div>
 
           <div className="chart-legend" aria-label="グラフの凡例">
+            {chartData.isTrend && (
+              <span>
+                <i className="chart-legend-mark chart-legend-real" />
+                実収支
+                <strong>棒</strong>
+              </span>
+            )}
             <span>
               <i className="chart-legend-mark chart-legend-profit" />
-              収支
+              {chartData.isTrend ? "累計収支" : "収支"}
               <strong className={classForAmount(chartData.total)}>
                 {signedCurrency(chartData.total)}
               </strong>
             </span>
             <span>
               <i className="chart-legend-mark chart-legend-expected" />
-              期待値
+              {chartData.isTrend ? "累計期待値" : "期待値"}
               <strong className={classForAmount(chartData.expectedTotal)}>
                 {signedCurrency(chartData.expectedTotal)}
               </strong>
@@ -2927,7 +2937,7 @@ export function App() {
                 <>
                   <div className="chart-line-wrap">
                     <svg
-                      aria-label={`${chartData.title}の折れ線グラフ`}
+                      aria-label={`${chartData.title}グラフ`}
                       className="chart-line"
                       role="img"
                       viewBox={`0 0 ${chartSvgWidth} ${chartSvgHeight}`}
@@ -2962,6 +2972,23 @@ export function App() {
                       {chartGeometry.areaPath && (
                         <path className="chart-line-area" d={chartGeometry.areaPath} />
                       )}
+                      {chartGeometry.barCoordinates
+                        .filter((point) => point.count > 0)
+                        .map((point) => (
+                          <rect
+                            className={`chart-real-bar-column ${classForAmount(point.value)}`}
+                            height={point.barHeight}
+                            key={`${point.key}-real-bar`}
+                            rx={2}
+                            width={point.barWidth}
+                            x={point.barX}
+                            y={point.barY}
+                          >
+                            <title>
+                              {point.label} 実収支 {signedCurrency(point.value)}
+                            </title>
+                          </rect>
+                        ))}
                       {chartGeometry.linePath && (
                         <path className="chart-line-path" d={chartGeometry.linePath} />
                       )}

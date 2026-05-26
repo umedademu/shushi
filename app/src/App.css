@@ -457,6 +457,11 @@ h3 {
   background: #1c67be;
 }
 
+.chart-legend-real {
+  border-radius: 3px;
+  background: linear-gradient(180deg, #2e82cb 0%, #d35247 100%);
+}
+
 .chart-legend-expected {
   background: #b7791f;
 }
@@ -577,6 +582,19 @@ h3 {
   fill: #b7791f;
   stroke: #ffffff;
   stroke-width: 1.7;
+}
+
+.chart-real-bar-column {
+  fill: #2e82cb;
+  opacity: 0.42;
+}
+
+.chart-real-bar-column.amount-negative {
+  fill: #d35247;
+}
+
+.chart-real-bar-column.amount-even {
+  fill: #7f8d89;
 }
 
 .chart-bar-column {
