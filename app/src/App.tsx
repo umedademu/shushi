@@ -308,6 +308,11 @@ const updateItems = [
     title: "下部タブ型の画面構成に変更",
     body: "画面下にカレンダー、収支分析、店舗情報、機種情報、その他のタブを追加し、グラフやCSV操作を専用画面へ分けました。",
   },
+  {
+    date: "2026-05-26",
+    title: "折れ線グラフの見た目を調整",
+    body: "収支分析の折れ線を細くし、稼働がない日の点を表示しないようにして、グラフをすっきり見せるようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -2963,30 +2968,32 @@ export function App() {
                       {chartGeometry.expectedLinePath && (
                         <path className="chart-expected-line-path" d={chartGeometry.expectedLinePath} />
                       )}
-                      {chartGeometry.coordinates.map((point) => (
-                        <g key={point.key}>
-                          <circle
-                            className={`chart-line-dot ${point.count > 0 ? classForAmount(point.value) : "is-empty"}`}
-                            cx={point.x}
-                            cy={point.y}
-                            r={point.count > 0 ? 3.5 : 2}
-                          >
-                            <title>
-                              {point.label} 収支 {signedCurrency(point.plotValue)}
-                            </title>
-                          </circle>
-                          <circle
-                            className={`chart-expected-dot ${point.count > 0 ? "" : "is-empty"}`}
-                            cx={point.x}
-                            cy={point.expectedY}
-                            r={point.count > 0 ? 3 : 1.8}
-                          >
-                            <title>
-                              {point.label} 期待値 {signedCurrency(point.expectedPlotValue)}
-                            </title>
-                          </circle>
-                        </g>
-                      ))}
+                      {chartGeometry.coordinates
+                        .filter((point) => point.count > 0)
+                        .map((point) => (
+                          <g key={point.key}>
+                            <circle
+                              className={`chart-line-dot ${classForAmount(point.value)}`}
+                              cx={point.x}
+                              cy={point.y}
+                              r={2.8}
+                            >
+                              <title>
+                                {point.label} 収支 {signedCurrency(point.plotValue)}
+                              </title>
+                            </circle>
+                            <circle
+                              className="chart-expected-dot"
+                              cx={point.x}
+                              cy={point.expectedY}
+                              r={2.4}
+                            >
+                              <title>
+                                {point.label} 期待値 {signedCurrency(point.expectedPlotValue)}
+                              </title>
+                            </circle>
+                          </g>
+                        ))}
                     </svg>
                     <div className="chart-axis-labels">
                       <span>{chartData.linePoints[0]?.label ?? ""}</span>

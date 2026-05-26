@@ -40,6 +40,7 @@ Implemented draft behavior:
 - Show expected value together with profit in the charts.
 - Show expected value as a second line in line charts and as a second bar in store and machine rows.
 - Show expected values with plus/minus signs and amount colors.
+- Keep line charts visually light, with thinner lines and points only on days that have records.
 - Use the top-right edit icon as the only entry point for adding a play record.
 - Remove the duplicated selected-day add card and tighten the desktop layout.
 - Show the desktop view as a wider single column.
