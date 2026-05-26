@@ -271,6 +271,11 @@ const updateItems = [
     title: "店舗詳細のレート追加を調整",
     body: "レート追加ボタンをレートと貯玉の欄へ移し、パチンコのレート追加・スロットのレート追加という文言に変更しました。",
   },
+  {
+    date: "2026-05-26",
+    title: "全店舗の貯玉合計を追加",
+    body: "店舗一覧に、全店舗の貯玉を円換算・パチンコ玉数・スロット枚数で確認できる合計欄を追加しました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -1438,6 +1443,22 @@ export function App() {
     () => storeInfoList.find((store) => store.name === selectedStoreInfoName) ?? null,
     [selectedStoreInfoName, storeInfoList],
   );
+  const storeSavedTotals = useMemo(() => {
+    const activeRates = rateOptions.filter((rate) => rate.savedCount !== 0);
+    return {
+      pachinkoCount: activeRates
+        .filter((rate) => rate.kind === "pachinko")
+        .reduce((total, rate) => total + rate.savedCount, 0),
+      rateCount: activeRates.length,
+      slotCount: activeRates
+        .filter((rate) => rate.kind === "slot")
+        .reduce((total, rate) => total + rate.savedCount, 0),
+      storeCount: new Set(activeRates.map((rate) => rate.storeName)).size,
+      yenValue: Math.round(
+        activeRates.reduce((total, rate) => total + rate.savedCount * rateUnitValue(rate), 0),
+      ),
+    };
+  }, [rateOptions]);
   const bulkStoreOptions = useMemo(
     () =>
       Array.from(
@@ -2426,6 +2447,36 @@ export function App() {
             </div>
           ) : (
             <>
+              <section className="store-total-panel">
+                <header className="store-total-head">
+                  <div>
+                    <p className="eyebrow">全店舗合計</p>
+                    <h2>全店舗合計の貯玉</h2>
+                  </div>
+                  <strong className={classForAmount(storeSavedTotals.yenValue)}>
+                    {currency(storeSavedTotals.yenValue)}
+                  </strong>
+                </header>
+                <dl className="store-total-grid">
+                  <div>
+                    <dt>パチンコ</dt>
+                    <dd>{plainSavedCount(storeSavedTotals.pachinkoCount, "pachinko")}</dd>
+                  </div>
+                  <div>
+                    <dt>スロット</dt>
+                    <dd>{plainSavedCount(storeSavedTotals.slotCount, "slot")}</dd>
+                  </div>
+                  <div>
+                    <dt>対象店舗</dt>
+                    <dd>{storeSavedTotals.storeCount}店舗</dd>
+                  </div>
+                  <div>
+                    <dt>対象レート</dt>
+                    <dd>{storeSavedTotals.rateCount}件</dd>
+                  </div>
+                </dl>
+              </section>
+
               <div className="store-tabs" aria-label="店舗の分類">
                 {storeTabs.map((tab) => (
                   <button

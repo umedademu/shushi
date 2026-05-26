@@ -159,6 +159,7 @@ h3 {
 .record-item,
 .empty-state,
 .update-item,
+.store-total-panel,
 .store-summary-panel,
 .store-section,
 .store-card,
@@ -790,6 +791,46 @@ h3 {
   opacity: 0.8;
 }
 
+.store-total-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.store-total-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.store-total-head > strong {
+  flex: 0 0 auto;
+  font-size: 18px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.store-total-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.store-total-grid dt {
+  color: #72807c;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.store-total-grid dd {
+  color: #1b2925;
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
 .store-search {
   align-items: center;
   border: 1px solid #d4dfdb;
@@ -1075,6 +1116,7 @@ h3 {
 .record-item,
 .empty-state,
 .update-item,
+.store-total-panel,
 .store-summary-panel,
 .store-section,
 .store-rate-card {
@@ -1791,6 +1833,7 @@ h3 {
   .form-pair,
   .store-card-stats,
   .store-summary-grid,
+  .store-total-grid,
   .store-saved-row {
     grid-template-columns: 1fr;
   }
