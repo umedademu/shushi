@@ -1295,6 +1295,61 @@ h3 {
   gap: 10px;
 }
 
+.bulk-rate-options {
+  display: grid;
+  gap: 6px;
+}
+
+.bulk-rate-option {
+  align-items: center;
+  width: 100%;
+  min-height: 54px;
+  border: 1px solid #e0e7e4;
+  border-radius: 8px;
+  background: #fbfcfb;
+  color: #1a2724;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.bulk-rate-option span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.bulk-rate-option strong {
+  color: inherit;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.bulk-rate-option small {
+  color: #61706b;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.bulk-rate-option.is-selected {
+  border-color: #156a56;
+  background: #eaf3f0;
+  color: #145746;
+}
+
+.bulk-rate-option:disabled {
+  background: #eef3f1;
+  color: #8a9894;
+  cursor: not-allowed;
+}
+
+.bulk-rate-option:disabled small {
+  color: #8a9894;
+}
+
 .bulk-rate-head span,
 .bulk-preview span {
   color: #65736f;

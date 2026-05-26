@@ -48,6 +48,7 @@ Implemented draft behavior:
 - Show positive profit and positive saved-ball changes in blue, while keeping selected calendar day values readable.
 - Move the monthly chart to the previous or next month with buttons that stay linked to the main calendar month.
 - Bulk edit past records for one store by assigning all pachinko records or all slot records to selected store rates.
+- Show rate details such as exchange rate, saved balls, and replay fee when choosing a rate in bulk editing.
 
 ## Saved Fields
 

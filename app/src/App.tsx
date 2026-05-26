@@ -227,6 +227,11 @@ const updateItems = [
     title: "過去記録の一括編集を追加",
     body: "指定した店舗の過去記録に対して、パチンコとスロットのレートをまとめて付け替えられるようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "一括編集のレート選択を見やすく変更",
+    body: "一括編集でレートを選ぶ時に、レート名だけでなく交換率・貯玉・再プレイ率も見えるようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -2333,21 +2338,41 @@ export function App() {
                     <span>パチンコ</span>
                     <strong>{bulkPachinkoTargetCount}件</strong>
                   </div>
-                  <select
-                    value={bulkPachinkoRateId}
-                    onChange={(event) => {
-                      setBulkPachinkoRateId(event.target.value);
-                      setBulkMessage("");
-                    }}
-                    disabled={bulkPachinkoRates.length === 0 || bulkPachinkoTargetCount === 0}
-                  >
-                    <option value="">変更しない</option>
+                  <div className="bulk-rate-options">
+                    <button
+                      className={`bulk-rate-option ${bulkPachinkoRateId === "" ? "is-selected" : ""}`}
+                      type="button"
+                      onClick={() => {
+                        setBulkPachinkoRateId("");
+                        setBulkMessage("");
+                      }}
+                      disabled={bulkPachinkoTargetCount === 0}
+                    >
+                      <span>
+                        <strong>変更しない</strong>
+                        <small>この店舗のパチンコ記録はそのままにします。</small>
+                      </span>
+                      {bulkPachinkoRateId === "" && <Check size={18} />}
+                    </button>
                     {bulkPachinkoRates.map((rate) => (
-                      <option key={rate.id} value={rate.id}>
-                        {rate.name}
-                      </option>
+                      <button
+                        className={`bulk-rate-option ${bulkPachinkoRateId === rate.id ? "is-selected" : ""}`}
+                        key={rate.id}
+                        type="button"
+                        onClick={() => {
+                          setBulkPachinkoRateId(rate.id);
+                          setBulkMessage("");
+                        }}
+                        disabled={bulkPachinkoTargetCount === 0}
+                      >
+                        <span>
+                          <strong>{rate.name}</strong>
+                          <small>{rateSummary(rate)}</small>
+                        </span>
+                        {bulkPachinkoRateId === rate.id && <Check size={18} />}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                   <p>
                     {bulkPachinkoRates.length === 0
                       ? "この店舗にパチンコのレートが登録されていません。"
@@ -2360,21 +2385,41 @@ export function App() {
                     <span>スロット</span>
                     <strong>{bulkSlotTargetCount}件</strong>
                   </div>
-                  <select
-                    value={bulkSlotRateId}
-                    onChange={(event) => {
-                      setBulkSlotRateId(event.target.value);
-                      setBulkMessage("");
-                    }}
-                    disabled={bulkSlotRates.length === 0 || bulkSlotTargetCount === 0}
-                  >
-                    <option value="">変更しない</option>
+                  <div className="bulk-rate-options">
+                    <button
+                      className={`bulk-rate-option ${bulkSlotRateId === "" ? "is-selected" : ""}`}
+                      type="button"
+                      onClick={() => {
+                        setBulkSlotRateId("");
+                        setBulkMessage("");
+                      }}
+                      disabled={bulkSlotTargetCount === 0}
+                    >
+                      <span>
+                        <strong>変更しない</strong>
+                        <small>この店舗のスロット記録はそのままにします。</small>
+                      </span>
+                      {bulkSlotRateId === "" && <Check size={18} />}
+                    </button>
                     {bulkSlotRates.map((rate) => (
-                      <option key={rate.id} value={rate.id}>
-                        {rate.name}
-                      </option>
+                      <button
+                        className={`bulk-rate-option ${bulkSlotRateId === rate.id ? "is-selected" : ""}`}
+                        key={rate.id}
+                        type="button"
+                        onClick={() => {
+                          setBulkSlotRateId(rate.id);
+                          setBulkMessage("");
+                        }}
+                        disabled={bulkSlotTargetCount === 0}
+                      >
+                        <span>
+                          <strong>{rate.name}</strong>
+                          <small>{rateSummary(rate)}</small>
+                        </span>
+                        {bulkSlotRateId === rate.id && <Check size={18} />}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                   <p>
                     {bulkSlotRates.length === 0
                       ? "この店舗にスロットのレートが登録されていません。"

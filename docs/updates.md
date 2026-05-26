@@ -41,3 +41,4 @@
 - Added previous and next month buttons to the monthly chart, linked to the main calendar month.
 - Added bulk editing to assign one store's past pachinko or slot records to selected store rates.
 - Prevented store and machine chart bars from overlapping labels or amount text.
+- Changed bulk editing rate choices to show exchange rate, saved balls, and replay fee details.
