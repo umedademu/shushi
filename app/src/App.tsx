@@ -323,6 +323,11 @@ const updateItems = [
     title: "収支グラフの成績表示を強化",
     body: "グラフの右側に円目盛りを出し、月別では10日・20日・30日の目安線を追加しました。さらに回数、勝率、投資、回収、時給などの成績欄も確認できるようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "収支分析をpRecord風に整理",
+    body: "グラフ上の金額付き凡例と最高・最低カードをなくし、グラフ下に今月の成績と大きな合計収支、平均額や期待値合計を含む成績表を表示する形にしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -720,13 +725,6 @@ function groupChart(records: PlayRecord[], field: "storeName" | "machineName"): 
     .map(([label, groupedRecords]) => chartPoint(label, label, groupedRecords))
     .sort((left, right) => Math.abs(right.value) - Math.abs(left.value))
     .slice(0, 12);
-}
-
-function chartDisplayValue(point: ChartPlotPoint | null | undefined, isTrend: boolean) {
-  if (!point) {
-    return 0;
-  }
-  return isTrend ? point.plotValue : point.value;
 }
 
 function chartPointPath(points: Array<ChartPlotPoint & { x: number; y: number }>) {
@@ -1222,7 +1220,7 @@ export function App() {
     const isTrend = chartMode === "month" || chartMode === "year" || chartMode === "life";
     const chartTitle =
       chartMode === "month"
-        ? `${monthLabel(currentMonth)}の累計収支`
+        ? "今月の収支グラフ"
         : chartMode === "year"
           ? `${year}年の累計収支`
           : chartMode === "life"
@@ -1246,6 +1244,7 @@ export function App() {
     const count = activePoints.reduce((sum, point) => sum + point.count, 0);
     const statsRecords = chartRecordsForMode(records, chartMode, currentMonth);
     const statsResults = statsRecords.map((record) => profit(record));
+    const expectedInputRecords = statsRecords.filter((record) => record.expectedValue !== 0);
     const statsCount = statsRecords.length;
     const statsTotal = statsResults.reduce((sum, value) => sum + value, 0);
     const statsHours = statsRecords.reduce(
@@ -1254,7 +1253,7 @@ export function App() {
     );
     const statsTitle =
       chartMode === "month"
-        ? `${monthLabel(currentMonth)}の成績`
+        ? "今月の成績"
         : chartMode === "year"
           ? `${year}年の成績`
           : chartMode === "life"
@@ -1266,8 +1265,14 @@ export function App() {
       averageProfit: statsCount ? statsTotal / statsCount : 0,
       count: statsCount,
       drawCount: statsResults.filter((value) => value === 0).length,
-      expectedAverage: statsCount ? recordsExpectedValue(statsRecords) / statsCount : 0,
+      expectedAverage: expectedInputRecords.length
+        ? recordsExpectedValue(expectedInputRecords) / expectedInputRecords.length
+        : 0,
+      expectedDrawCount: expectedInputRecords.filter((record) => record.expectedValue === 0).length,
+      expectedInputCount: expectedInputRecords.length,
+      expectedLoseCount: expectedInputRecords.filter((record) => record.expectedValue < 0).length,
       expectedTotal: recordsExpectedValue(statsRecords),
+      expectedWinCount: expectedInputRecords.filter((record) => record.expectedValue > 0).length,
       hourlyProfit: statsHours > 0 ? statsTotal / statsHours : 0,
       hours: statsHours,
       loseCount: statsResults.filter((value) => value < 0).length,
@@ -1279,7 +1284,16 @@ export function App() {
         (max, record) => Math.max(max, recordRecoveryValue(record)),
         0,
       ),
+      savedProfit: statsRecords.reduce((sum, record) => sum + savedProfit(record), 0),
+      savedUnitKind: recordsSavedUnitKind(statsRecords),
+      savedValue: Math.round(
+        statsRecords.reduce(
+          (sum, record) => sum + savedProfit(record) * savedUnitValue(record),
+          0,
+        ),
+      ),
       title: statsTitle,
+      totalProfit: statsTotal,
       totalInvestment: statsRecords.reduce(
         (sum, record) => sum + recordInvestmentValue(record),
         0,
@@ -1319,27 +1333,11 @@ export function App() {
     const barValues = linePoints.flatMap((point) => [point.value, point.expectedValue]);
     const barMin = Math.min(0, ...barValues);
     const barMax = Math.max(0, ...barValues);
-    const highlightSource = isTrend ? linePoints.filter((point) => point.count > 0) : linePoints;
-    const best = highlightSource.reduce<ChartPlotPoint | null>(
-      (current, point) =>
-        !current || chartDisplayValue(point, isTrend) > chartDisplayValue(current, isTrend)
-          ? point
-          : current,
-      null,
-    );
-    const worst = highlightSource.reduce<ChartPlotPoint | null>(
-      (current, point) =>
-        !current || chartDisplayValue(point, isTrend) < chartDisplayValue(current, isTrend)
-          ? point
-          : current,
-      null,
-    );
 
     return {
       activePoints,
       barMax,
       barMin,
-      best,
       count,
       expectedTotal,
       isTrend,
@@ -1350,7 +1348,6 @@ export function App() {
       stats,
       title: chartTitle,
       total,
-      worst,
     };
   }, [chartMode, currentMonth, records]);
   const chartGeometry = useMemo(() => {
@@ -2933,9 +2930,6 @@ export function App() {
               <p className="eyebrow">分析</p>
               <h2>収支グラフ</h2>
             </div>
-            <strong className={classForAmount(chartData.total)}>
-              {signedCurrency(chartData.total)}
-            </strong>
           </header>
 
           <div className="chart-tabs" aria-label="収支グラフの切り替え">
@@ -2977,56 +2971,12 @@ export function App() {
                 </button>
               )}
             </div>
-            <strong>{chartData.count}件</strong>
-          </div>
-
-          <div className="chart-legend" aria-label="グラフの凡例">
-            {chartData.isTrend && (
-              <span>
-                <i className="chart-legend-mark chart-legend-real" />
-                実収支
-                <strong>棒</strong>
-              </span>
-            )}
-            <span>
-              <i className="chart-legend-mark chart-legend-profit" />
-              {chartData.isTrend ? "累計収支" : "収支"}
-              <strong className={classForAmount(chartData.total)}>
-                {signedCurrency(chartData.total)}
-              </strong>
-            </span>
-            <span>
-              <i className="chart-legend-mark chart-legend-expected" />
-              {chartData.isTrend ? "累計期待値" : "期待値"}
-              <strong className={classForAmount(chartData.expectedTotal)}>
-                {signedCurrency(chartData.expectedTotal)}
-              </strong>
-            </span>
           </div>
 
           {chartData.count === 0 ? (
             <div className="chart-empty">表示できる記録がありません。</div>
           ) : (
             <>
-              <div className="chart-highlights">
-                <div>
-                  <span>{chartData.isTrend ? "最高到達" : "最大プラス"}</span>
-                  <strong className={classForAmount(chartDisplayValue(chartData.best, chartData.isTrend))}>
-                    {chartData.best
-                      ? `${chartData.best.label} ${signedCurrency(chartDisplayValue(chartData.best, chartData.isTrend))}`
-                      : "-"}
-                  </strong>
-                </div>
-                <div>
-                  <span>{chartData.isTrend ? "最低到達" : "最大マイナス"}</span>
-                  <strong className={classForAmount(chartDisplayValue(chartData.worst, chartData.isTrend))}>
-                    {chartData.worst
-                      ? `${chartData.worst.label} ${signedCurrency(chartDisplayValue(chartData.worst, chartData.isTrend))}`
-                      : "-"}
-                  </strong>
-                </div>
-              </div>
-
               {chartData.isTrend ? (
                 <>
                   <div className="chart-line-wrap">
@@ -3156,13 +3106,27 @@ export function App() {
                         </>
                       )}
                     </div>
+                    <div className="chart-legend chart-legend-compact" aria-label="グラフの凡例">
+                      <span>
+                        <i className="chart-legend-mark chart-legend-real" />
+                        実収支
+                      </span>
+                      <span>
+                        <i className="chart-legend-mark chart-legend-profit" />
+                        累計収支
+                      </span>
+                      <span>
+                        <i className="chart-legend-mark chart-legend-expected" />
+                        累計期待値
+                      </span>
+                    </div>
                   </div>
 
                   <section className="chart-score-panel">
                     <header className="chart-score-head">
                       <h3>{chartData.stats.title}</h3>
-                      <strong className={classForAmount(chartData.stats.averageProfit)}>
-                        平均 {signedCurrency(Math.round(chartData.stats.averageProfit))}
+                      <strong className={classForAmount(chartData.stats.totalProfit)}>
+                        {signedCurrency(chartData.stats.totalProfit).replace("円", "")}
                       </strong>
                     </header>
                     <div className="chart-score-grid">
@@ -3171,46 +3135,86 @@ export function App() {
                         <strong>{chartData.stats.count}回</strong>
                       </div>
                       <div>
-                        <span>勝率</span>
-                        <strong>{chartData.stats.winRate.toFixed(1)}%</strong>
+                        <span>投資合計</span>
+                        <strong>{currency(chartData.stats.totalInvestment)}</strong>
                       </div>
                       <div>
                         <span>勝数</span>
                         <strong>{chartData.stats.winCount}回</strong>
                       </div>
                       <div>
+                        <span>回収合計</span>
+                        <strong>{currency(chartData.stats.totalRecovery)}</strong>
+                      </div>
+                      <div>
                         <span>負数</span>
                         <strong>{chartData.stats.loseCount}回</strong>
+                      </div>
+                      <div>
+                        <span>平均額</span>
+                        <strong className={classForAmount(chartData.stats.averageProfit)}>
+                          {signedCurrency(Math.round(chartData.stats.averageProfit))}
+                        </strong>
                       </div>
                       <div>
                         <span>引分</span>
                         <strong>{chartData.stats.drawCount}回</strong>
                       </div>
                       <div>
-                        <span>時間</span>
-                        <strong>{chartData.stats.hours.toFixed(1)}時間</strong>
-                      </div>
-                      <div>
-                        <span>投資合計</span>
-                        <strong>{currency(chartData.stats.totalInvestment)}</strong>
-                      </div>
-                      <div>
-                        <span>回収合計</span>
-                        <strong>{currency(chartData.stats.totalRecovery)}</strong>
-                      </div>
-                      <div>
                         <span>最高投資</span>
                         <strong>{currency(chartData.stats.maxInvestment)}</strong>
+                      </div>
+                      <div>
+                        <span>勝率</span>
+                        <strong>{chartData.stats.winRate.toFixed(1)}%</strong>
                       </div>
                       <div>
                         <span>最高回収</span>
                         <strong>{currency(chartData.stats.maxRecovery)}</strong>
                       </div>
                       <div>
+                        <span>時間</span>
+                        <strong>{chartData.stats.hours.toFixed(1)}時間</strong>
+                      </div>
+                      <div>
                         <span>時給</span>
                         <strong className={classForAmount(chartData.stats.hourlyProfit)}>
                           {signedCurrency(Math.round(chartData.stats.hourlyProfit))}
                         </strong>
+                      </div>
+                      <div>
+                        <span>貯玉合計</span>
+                        <strong className={classForAmount(chartData.stats.savedProfit)}>
+                          {savedCount(chartData.stats.savedProfit, chartData.stats.savedUnitKind)}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>貯玉換算</span>
+                        <strong className={classForAmount(chartData.stats.savedValue)}>
+                          {signedCurrency(chartData.stats.savedValue)}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>期待値勝数</span>
+                        <strong>{chartData.stats.expectedWinCount}回</strong>
+                      </div>
+                      <div>
+                        <span>期待値入力</span>
+                        <strong>{chartData.stats.expectedInputCount}回</strong>
+                      </div>
+                      <div>
+                        <span>期待値負数</span>
+                        <strong>{chartData.stats.expectedLoseCount}回</strong>
+                      </div>
+                      <div>
+                        <span>期待値合計</span>
+                        <strong className={classForAmount(chartData.stats.expectedTotal)}>
+                          {signedCurrency(chartData.stats.expectedTotal)}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>期待値引分</span>
+                        <strong>{chartData.stats.expectedDrawCount}回</strong>
                       </div>
                       <div>
                         <span>期待値平均</span>

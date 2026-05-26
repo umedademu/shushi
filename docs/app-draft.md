@@ -57,7 +57,7 @@ Implemented draft behavior:
 - Place rate addition buttons inside the store detail rate and saved-ball section, with labels that clearly say they add pachinko or slot rates.
 - Use bottom tabs for the main app areas: monthly calendar, profit analysis, store information, machine information, and other data operations.
 - Add actual profit bars on top of the monthly, yearly, and lifetime chart views, while keeping cumulative profit and expected value as lines.
-- Show pRecord-style chart helpers: right-side yen scale labels, guide lines, and a compact performance summary for the current chart range.
+- Show pRecord-style chart helpers: right-side yen scale labels, guide lines, a simple graph legend, and a performance summary for the current chart range.
 
 ## Main Layout
 
@@ -105,9 +105,9 @@ The profit analysis tab includes a line-style profit chart with five views:
 
 The monthly chart uses the same displayed month as the main calendar. Moving the month from either place updates both sections. Monthly, yearly, and lifetime charts also show actual profit bars for each period: daily bars in monthly view, monthly bars in yearly view, and yearly bars in lifetime view.
 
-Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right. Trend charts use right-side yen scale labels and guide lines so the current result is easier to read against the zero line. In the store and machine views, the row label, bar area, and amount are separated so long positive or negative bars do not cover text.
+Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right. Trend charts use right-side yen scale labels and guide lines so the current result is easier to read against the zero line. The graph keeps only a compact legend below the chart and does not show highest or lowest cards above it. In the store and machine views, the row label, bar area, and amount are separated so long positive or negative bars do not cover text.
 
-Under the trend chart, the app shows a pRecord-style performance summary for the current range, including play count, win rate, wins, losses, draws, play hours, total investment, total recovery, highest investment, highest recovery, hourly profit, and expected value average.
+Under the trend chart, the app shows a pRecord-style performance summary for the current range. The heading shows the main period result, while the summary includes play count, win rate, wins, losses, draws, play hours, total investment, total recovery, highest investment, highest recovery, average amount, saved-ball totals, hourly profit, expected value input count, expected value total, and expected value average.
 
 ## Rate Settings
 
