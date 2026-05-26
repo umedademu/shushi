@@ -74,9 +74,10 @@ type RateSnapshot = Pick<
   | "rateReplayFeePercent"
 >;
 
-type ViewMode = "home" | "updates";
+type ViewMode = "home" | "updates" | "stores";
 type OptionField = "storeName" | "machineName";
 type ChartMode = "month" | "year" | "life" | "store" | "machine";
+type StoreTab = "favorite" | "registered" | "custom";
 
 type ChartPoint = {
   key: string;
@@ -89,6 +90,29 @@ type ChartPoint = {
 type ChartPlotPoint = ChartPoint & {
   plotValue: number;
   expectedPlotValue: number;
+};
+
+type StoreMachineSummary = {
+  name: string;
+  count: number;
+  profit: number;
+  expectedValue: number;
+  lastDate: string;
+};
+
+type StoreInfo = {
+  name: string;
+  isFavorite: boolean;
+  isRegistered: boolean;
+  records: PlayRecord[];
+  rates: RateOption[];
+  monthProfit: number;
+  totalProfit: number;
+  totalExpectedValue: number;
+  totalHours: number;
+  lastDate: string;
+  savedText: string;
+  machines: StoreMachineSummary[];
 };
 
 const storageKey = "shushi-play-records";
@@ -232,6 +256,11 @@ const updateItems = [
     title: "一括編集のレート選択を見やすく変更",
     body: "一括編集でレートを選ぶ時に、レート名だけでなく交換率・貯玉・再プレイ率も見えるようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "店舗情報画面を追加",
+    body: "店舗一覧から店舗ごとの貯玉、収支、過去記録、打った機種を確認し、レートと貯玉を直接編集できるようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -240,6 +269,12 @@ const chartModes: Array<{ key: ChartMode; label: string }> = [
   { key: "life", label: "生涯" },
   { key: "store", label: "店舗別" },
   { key: "machine", label: "機種別" },
+];
+
+const storeTabs: Array<{ key: StoreTab; label: string }> = [
+  { key: "favorite", label: "お気に入り" },
+  { key: "registered", label: "登録店舗" },
+  { key: "custom", label: "自登録店舗" },
 ];
 
 const chartSvgWidth = 360;
@@ -1052,6 +1087,12 @@ export function App() {
   const [bulkPachinkoRateId, setBulkPachinkoRateId] = useState("");
   const [bulkSlotRateId, setBulkSlotRateId] = useState("");
   const [bulkMessage, setBulkMessage] = useState("");
+  const [storeTab, setStoreTab] = useState<StoreTab>("favorite");
+  const [storeQuery, setStoreQuery] = useState("");
+  const [selectedStoreInfoName, setSelectedStoreInfoName] = useState<string | null>(null);
+  const [rateEditorStoreName, setRateEditorStoreName] = useState<string | null>(null);
+  const [savedCountDrafts, setSavedCountDrafts] = useState<Record<string, string>>({});
+  const [storeMessage, setStoreMessage] = useState("");
 
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
 
@@ -1278,6 +1319,105 @@ export function App() {
     () => selectedStoreRates.find((rate) => rate.id === form.rateId) ?? null,
     [form.rateId, selectedStoreRates],
   );
+  const storeInfoList = useMemo<StoreInfo[]>(() => {
+    const registeredStoreSet = new Set(storeOptions);
+    const favoriteStoreSet = new Set(favoriteStores);
+    const monthPrefix = `${currentMonth.getFullYear()}-${pad(currentMonth.getMonth() + 1)}-`;
+    const storeNames = Array.from(
+      new Set(
+        [
+          ...storeOptions,
+          ...records.map((record) => record.storeName),
+          ...rateOptions.map((rate) => rate.storeName),
+          ...favoriteStores,
+        ]
+          .map((name) => name.trim())
+          .filter(Boolean),
+      ),
+    ).sort((left, right) => left.localeCompare(right, "ja"));
+
+    return storeNames.map((storeName) => {
+      const storeRecords = records
+        .filter((record) => record.storeName === storeName)
+        .sort((left, right) =>
+          `${right.date} ${right.startTime}`.localeCompare(`${left.date} ${left.startTime}`),
+        );
+      const storeRates = rateOptions.filter((rate) => rate.storeName === storeName);
+      const monthStoreRecords = storeRecords.filter((record) => record.date.startsWith(monthPrefix));
+      const savedRates = storeRates.filter((rate) => rate.savedCount !== 0);
+      const visibleSavedRates = (savedRates.length > 0 ? savedRates : storeRates).slice(0, 3);
+      const savedText =
+        visibleSavedRates.length > 0
+          ? visibleSavedRates.map((rate) => `${rate.name} ${plainSavedCount(rate.savedCount, rate.kind)}`).join(" / ")
+          : "貯玉なし";
+      const machineGroups = new Map<string, PlayRecord[]>();
+      storeRecords.forEach((record) => {
+        if (!record.machineName) {
+          return;
+        }
+        machineGroups.set(record.machineName, [...(machineGroups.get(record.machineName) ?? []), record]);
+      });
+      const machines = Array.from(machineGroups.entries())
+        .map<StoreMachineSummary>(([machineName, machineRecords]) => ({
+          name: machineName,
+          count: machineRecords.length,
+          profit: recordsProfit(machineRecords),
+          expectedValue: recordsExpectedValue(machineRecords),
+          lastDate: machineRecords
+            .map((record) => record.date)
+            .sort((left, right) => right.localeCompare(left))[0],
+        }))
+        .sort((left, right) => right.lastDate.localeCompare(left.lastDate) || right.count - left.count);
+
+      return {
+        name: storeName,
+        isFavorite: favoriteStoreSet.has(storeName),
+        isRegistered: registeredStoreSet.has(storeName),
+        records: storeRecords,
+        rates: storeRates,
+        monthProfit: recordsProfit(monthStoreRecords),
+        totalProfit: recordsProfit(storeRecords),
+        totalExpectedValue: recordsExpectedValue(storeRecords),
+        totalHours: storeRecords.reduce(
+          (total, record) => total + durationHours(record.startTime, record.endTime),
+          0,
+        ),
+        lastDate: storeRecords[0]?.date ?? "",
+        savedText,
+        machines,
+      };
+    });
+  }, [currentMonth, favoriteStores, rateOptions, records]);
+  const filteredStoreInfoList = useMemo(() => {
+    const query = normalizeOptionText(storeQuery);
+    const byTab = storeInfoList.filter((store) => {
+      if (storeTab === "favorite") {
+        return store.isFavorite;
+      }
+      if (storeTab === "registered") {
+        return store.isRegistered;
+      }
+      return !store.isRegistered;
+    });
+    const byQuery = query
+      ? byTab.filter((store) => normalizeOptionText(store.name).includes(query))
+      : byTab;
+
+    return byQuery.sort((left, right) => {
+      const leftHasData = left.records.length > 0 || left.rates.length > 0 || left.isFavorite;
+      const rightHasData = right.records.length > 0 || right.rates.length > 0 || right.isFavorite;
+
+      if (leftHasData !== rightHasData) {
+        return leftHasData ? -1 : 1;
+      }
+
+      return left.name.localeCompare(right.name, "ja");
+    });
+  }, [storeInfoList, storeQuery, storeTab]);
+  const selectedStoreInfo = useMemo(
+    () => storeInfoList.find((store) => store.name === selectedStoreInfoName) ?? null,
+    [selectedStoreInfoName, storeInfoList],
+  );
   const bulkStoreOptions = useMemo(
     () =>
       Array.from(
@@ -1443,11 +1583,49 @@ export function App() {
     setIsEditorOpen(true);
   }
 
+  function openEditorForStore(storeName: string) {
+    const isFirstRecordForDay = !records.some((record) => record.date === selectedDate);
+    setViewMode("home");
+    setEditingRecordId(null);
+    setForm({
+      ...createForm(selectedDate, isFirstRecordForDay),
+      storeName,
+    });
+    setIsEditorOpen(true);
+  }
+
   function openRecordEditor(record: PlayRecord) {
     setSelectedDate(record.date);
     setEditingRecordId(record.id);
     setForm(createFormFromRecord(record));
     setIsEditorOpen(true);
+  }
+
+  function openRecordEditorFromStore(record: PlayRecord) {
+    setViewMode("home");
+    openRecordEditor(record);
+  }
+
+  function openStoreView() {
+    setSelectedStoreInfoName(null);
+    setStoreMessage("");
+    setViewMode("stores");
+  }
+
+  function closeStoreView() {
+    setSelectedStoreInfoName(null);
+    setStoreMessage("");
+    setViewMode("home");
+  }
+
+  function selectStoreInfo(storeName: string) {
+    setSelectedStoreInfoName(storeName);
+    setStoreMessage("");
+  }
+
+  function closeStoreDetail() {
+    setSelectedStoreInfoName(null);
+    setStoreMessage("");
   }
 
   function closeEditor() {
@@ -1458,6 +1636,7 @@ export function App() {
     setIsRateSelectorOpen(false);
     setIsRateEditorOpen(false);
     setEditingRateId(null);
+    setRateEditorStoreName(null);
   }
 
   function updateForm(key: keyof RecordForm, value: string) {
@@ -1508,6 +1687,13 @@ export function App() {
     setIsRateSelectorOpen(false);
     setIsRateEditorOpen(false);
     setEditingRateId(null);
+    setRateEditorStoreName(null);
+  }
+
+  function closeRateEditor() {
+    setIsRateEditorOpen(false);
+    setEditingRateId(null);
+    setRateEditorStoreName(null);
   }
 
   function openBulkEditor() {
@@ -1538,15 +1724,17 @@ export function App() {
     setBulkMessage("");
   }
 
-  function openRateEditor(kind: RateKind) {
+  function openRateEditor(kind: RateKind, storeName = form.storeName) {
     setRateForm(createRateForm(kind));
     setEditingRateId(null);
+    setRateEditorStoreName(storeName.trim() || null);
     setIsRateEditorOpen(true);
   }
 
   function openRateEdit(rate: RateOption) {
     setRateForm(createRateFormFromRate(rate));
     setEditingRateId(rate.id);
+    setRateEditorStoreName(rate.storeName);
     setIsRateEditorOpen(true);
   }
 
@@ -1607,9 +1795,25 @@ export function App() {
     updateRateSavedCounts(new Map([[rateId, amount]]));
   }
 
+  function updateRateSavedCountDirect(rate: RateOption) {
+    const nextSavedCount = toNumber(savedCountDrafts[rate.id] ?? String(rate.savedCount));
+    setRateOptions((current) => {
+      const nextOptions = current.map((item) =>
+        item.id === rate.id ? { ...item, savedCount: nextSavedCount } : item,
+      );
+      saveRateOptions(nextOptions);
+      return nextOptions;
+    });
+    setSavedCountDrafts((current) => {
+      const { [rate.id]: _removed, ...rest } = current;
+      return rest;
+    });
+    setStoreMessage(`${rate.name}の貯玉を${plainSavedCount(nextSavedCount, rate.kind)}に更新しました。`);
+  }
+
   function handleRateSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const storeName = form.storeName.trim();
+    const storeName = (rateEditorStoreName ?? form.storeName).trim();
     const name = rateForm.name.trim();
 
     if (!storeName || !name) {
@@ -1638,20 +1842,25 @@ export function App() {
           ? { ...current, rateName: nextRate.name }
           : current,
       );
-      setEditingRateId(null);
-      setIsRateEditorOpen(false);
+      setStoreMessage(`${storeName}の${nextRate.name}を更新しました。`);
+      closeRateEditor();
       return;
     }
 
     const nextOptions = [...rateOptions, nextRate];
     setRateOptions(nextOptions);
     saveRateOptions(nextOptions);
-    setForm((current) => ({
-      ...current,
-      rateId: nextRate.id,
-      rateName: nextRate.name,
-    }));
-    closeRateSelector();
+    if (isRateSelectorOpen) {
+      setForm((current) => ({
+        ...current,
+        rateId: nextRate.id,
+        rateName: nextRate.name,
+      }));
+      closeRateSelector();
+    } else {
+      setStoreMessage(`${storeName}に${nextRate.name}を追加しました。`);
+      closeRateEditor();
+    }
   }
 
   function updateFavoriteList(current: string[], value: string) {
@@ -1676,6 +1885,14 @@ export function App() {
         return next;
       });
     }
+  }
+
+  function toggleStoreFavorite(storeName: string) {
+    setFavoriteStores((current) => {
+      const next = updateFavoriteList(current, storeName);
+      saveStringList(favoriteStoreKey, next);
+      return next;
+    });
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -1812,6 +2029,472 @@ export function App() {
     if (editingRecordId === recordId) {
       closeEditor();
     }
+  }
+
+  function renderRateEditorDialog() {
+    return (
+      <div className="option-backdrop rate-editor-backdrop">
+        <section className="option-sheet rate-editor-sheet" aria-label="レート設定">
+          <header className="option-header">
+            <div>
+              <p className="eyebrow">設定</p>
+              <h2>{editingRateId ? "レート編集" : "レート設定"}</h2>
+            </div>
+            <button className="icon-button" type="button" onClick={closeRateEditor} title="閉じる">
+              <X size={20} />
+            </button>
+          </header>
+
+          <form className="record-form" onSubmit={handleRateSubmit}>
+            {rateEditorStoreName && (
+              <p className="rate-target-store">{rateEditorStoreName}</p>
+            )}
+
+            <div className="rate-kind-switch" aria-label="区分">
+              <button
+                className={`rate-kind-button ${rateForm.kind === "pachinko" ? "is-active" : ""}`}
+                type="button"
+                onClick={() => setRateForm(createRateForm("pachinko"))}
+              >
+                パチンコ
+              </button>
+              <button
+                className={`rate-kind-button ${rateForm.kind === "slot" ? "is-active" : ""}`}
+                type="button"
+                onClick={() => setRateForm(createRateForm("slot"))}
+              >
+                スロット
+              </button>
+            </div>
+
+            <label>
+              レート名
+              <input
+                value={rateForm.name}
+                onChange={(event) => updateRateForm("name", event.target.value)}
+                placeholder="4パチ"
+                required
+              />
+            </label>
+
+            <div className="form-pair">
+              <label>
+                {rateUnitLabel(rateForm.kind)}
+                <input
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  type="number"
+                  value={rateForm.unitPrice}
+                  onChange={(event) => updateRateForm("unitPrice", event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                交換率(100円辺り)
+                <input
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  type="number"
+                  value={rateForm.exchangeCountPer100Yen}
+                  onChange={(event) => updateRateForm("exchangeCountPer100Yen", event.target.value)}
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="form-pair">
+              <label>
+                {rateSavedLabel()}
+                <input
+                  inputMode="numeric"
+                  min="0"
+                  type="number"
+                  value={rateForm.savedCount}
+                  onChange={(event) => updateRateForm("savedCount", event.target.value)}
+                  placeholder="0"
+                />
+              </label>
+              <label>
+                再プレイ手数料率(%)
+                <input
+                  inputMode="decimal"
+                  min="0"
+                  step="0.1"
+                  type="number"
+                  value={rateForm.replayFeePercent}
+                  onChange={(event) => updateRateForm("replayFeePercent", event.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className="rate-preview">
+              <span>{rateKindLabel(rateForm.kind)}</span>
+              <strong>
+                {rateForm.name || "未入力"} / {rateUnitLabel(rateForm.kind)} {rateForm.unitPrice || 0}円
+              </strong>
+              <p>
+                100円あたり {rateForm.exchangeCountPer100Yen || 0}
+                {rateExchangeUnitLabel(rateForm.kind)} / {rateSavedLabel()}{" "}
+                {Number(rateForm.savedCount || 0).toLocaleString("ja-JP")}
+                {rateSavedUnitLabel(rateForm.kind)} / 再プレイ {rateForm.replayFeePercent || 0}%
+              </p>
+            </div>
+
+            <button className="save-button" type="submit">
+              {editingRateId ? "更新" : "設定完了"}
+            </button>
+          </form>
+        </section>
+      </div>
+    );
+  }
+
+  if (viewMode === "stores") {
+    const tabCounts = {
+      favorite: storeInfoList.filter((store) => store.isFavorite).length,
+      registered: storeInfoList.filter((store) => store.isRegistered).length,
+      custom: storeInfoList.filter((store) => !store.isRegistered).length,
+    };
+
+    return (
+      <main className="app-shell">
+        <section className="phone-frame store-frame">
+          <header className="top-bar">
+            <button className="icon-button" type="button" onClick={closeStoreView} title="戻る">
+              <ChevronLeft size={20} />
+            </button>
+            <div>
+              <p className="eyebrow">店舗情報</p>
+              <h1>{selectedStoreInfo ? selectedStoreInfo.name : "店舗一覧"}</h1>
+            </div>
+            <div className="top-spacer" />
+          </header>
+
+          {selectedStoreInfo ? (
+            <div className="store-detail">
+              <button className="text-button store-back-button" type="button" onClick={closeStoreDetail}>
+                <ChevronLeft size={18} />
+                一覧へ戻る
+              </button>
+
+              <section className="store-summary-panel">
+                <div className="store-summary-head">
+                  <div>
+                    <p className="eyebrow">{selectedStoreInfo.isRegistered ? "登録店舗" : "自登録店舗"}</p>
+                    <h2>{selectedStoreInfo.name}</h2>
+                  </div>
+                  <button
+                    className={`favorite-button ${selectedStoreInfo.isFavorite ? "is-active" : ""}`}
+                    type="button"
+                    onClick={() => toggleStoreFavorite(selectedStoreInfo.name)}
+                    title={selectedStoreInfo.isFavorite ? "お気に入りから外す" : "お気に入りに追加"}
+                    aria-label={`${selectedStoreInfo.name}を${
+                      selectedStoreInfo.isFavorite ? "お気に入りから外す" : "お気に入りに追加"
+                    }`}
+                  >
+                    <Star size={20} />
+                  </button>
+                </div>
+
+                <dl className="store-summary-grid">
+                  <div>
+                    <dt>{monthLabel(currentMonth)}収支</dt>
+                    <dd className={classForAmount(selectedStoreInfo.monthProfit)}>
+                      {signedCurrency(selectedStoreInfo.monthProfit)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>累計収支</dt>
+                    <dd className={classForAmount(selectedStoreInfo.totalProfit)}>
+                      {signedCurrency(selectedStoreInfo.totalProfit)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>貯玉</dt>
+                    <dd>{selectedStoreInfo.savedText}</dd>
+                  </div>
+                  <div>
+                    <dt>最終稼働日</dt>
+                    <dd>{selectedStoreInfo.lastDate || "記録なし"}</dd>
+                  </div>
+                  <div>
+                    <dt>稼働件数</dt>
+                    <dd>{selectedStoreInfo.records.length}件</dd>
+                  </div>
+                  <div>
+                    <dt>稼働時間</dt>
+                    <dd>{selectedStoreInfo.totalHours.toFixed(1)}時間</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section className="store-action-panel">
+                <button className="text-button" type="button" onClick={() => openEditorForStore(selectedStoreInfo.name)}>
+                  <Pencil size={18} />
+                  収支を入力
+                </button>
+                <button className="text-button" type="button" onClick={() => openRateEditor("pachinko", selectedStoreInfo.name)}>
+                  <Plus size={18} />
+                  パチンコ追加
+                </button>
+                <button className="text-button" type="button" onClick={() => openRateEditor("slot", selectedStoreInfo.name)}>
+                  <Plus size={18} />
+                  スロット追加
+                </button>
+              </section>
+
+              {storeMessage && <p className="store-message">{storeMessage}</p>}
+
+              <section className="store-section">
+                <header className="store-section-head">
+                  <div>
+                    <p className="eyebrow">レート・貯玉</p>
+                    <h2>レートと現在の貯玉</h2>
+                  </div>
+                </header>
+
+                <div className="store-rate-list">
+                  {selectedStoreInfo.rates.length === 0 ? (
+                    <div className="empty-state">
+                      <p>この店舗のレートはまだありません。</p>
+                    </div>
+                  ) : (
+                    selectedStoreInfo.rates.map((rate) => (
+                      <article className="store-rate-card" key={rate.id}>
+                        <div className="store-rate-head">
+                          <div>
+                            <strong>{rate.name}</strong>
+                            <small>{rateSummary(rate)}</small>
+                          </div>
+                          <div className="store-rate-buttons">
+                            <button
+                              className="rate-edit-button"
+                              type="button"
+                              onClick={() => openRateEdit(rate)}
+                              title="レートを編集"
+                              aria-label={`${rate.name}を編集`}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              className="rate-delete-button"
+                              type="button"
+                              onClick={() => deleteRateOption(rate.id)}
+                              title="レートを削除"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="store-saved-row">
+                          <label>
+                            現在の貯玉
+                            <input
+                              inputMode="numeric"
+                              min="0"
+                              type="number"
+                              value={savedCountDrafts[rate.id] ?? String(rate.savedCount)}
+                              onChange={(event) =>
+                                setSavedCountDrafts((current) => ({
+                                  ...current,
+                                  [rate.id]: event.target.value,
+                                }))
+                              }
+                            />
+                          </label>
+                          <button className="text-button" type="button" onClick={() => updateRateSavedCountDirect(rate)}>
+                            <Check size={18} />
+                            保存
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+
+              <section className="store-section">
+                <header className="store-section-head">
+                  <div>
+                    <p className="eyebrow">設置機種</p>
+                    <h2>この店舗で打った機種</h2>
+                  </div>
+                </header>
+
+                <div className="store-machine-list">
+                  {selectedStoreInfo.machines.length === 0 ? (
+                    <div className="empty-state">
+                      <p>この店舗で打った機種はまだありません。</p>
+                    </div>
+                  ) : (
+                    selectedStoreInfo.machines.map((machine) => (
+                      <article className="store-machine-row" key={machine.name}>
+                        <div>
+                          <strong>{machine.name}</strong>
+                          <span>
+                            {machine.count}件 / 最終 {machine.lastDate}
+                          </span>
+                        </div>
+                        <div>
+                          <strong className={classForAmount(machine.profit)}>
+                            {signedCurrency(machine.profit)}
+                          </strong>
+                          <span className={classForAmount(machine.expectedValue)}>
+                            期待値 {signedCurrency(machine.expectedValue)}
+                          </span>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+
+              <section className="store-section">
+                <header className="store-section-head">
+                  <div>
+                    <p className="eyebrow">過去記録</p>
+                    <h2>この店舗の稼働</h2>
+                  </div>
+                </header>
+
+                <div className="store-record-list">
+                  {selectedStoreInfo.records.length === 0 ? (
+                    <div className="empty-state">
+                      <p>この店舗の稼働記録はまだありません。</p>
+                    </div>
+                  ) : (
+                    selectedStoreInfo.records.slice(0, 30).map((record) => (
+                      <button
+                        className="store-record-row"
+                        key={record.id}
+                        type="button"
+                        onClick={() => openRecordEditorFromStore(record)}
+                      >
+                        <span>
+                          <strong>{record.machineName}</strong>
+                          <small>
+                            {record.date} {record.startTime} - {record.endTime}
+                            {record.rateName ? ` / ${record.rateName}` : ""}
+                          </small>
+                        </span>
+                        <strong className={classForAmount(profit(record))}>
+                          {signedCurrency(profit(record))}
+                        </strong>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </section>
+
+              <section className="store-section">
+                <header className="store-section-head">
+                  <div>
+                    <p className="eyebrow">イベント</p>
+                    <h2>イベント一覧</h2>
+                  </div>
+                </header>
+                <div className="empty-state">
+                  <p>イベント情報は今後追加予定です。</p>
+                </div>
+              </section>
+            </div>
+          ) : (
+            <>
+              <div className="store-tabs" aria-label="店舗の分類">
+                {storeTabs.map((tab) => (
+                  <button
+                    className={`chart-tab ${storeTab === tab.key ? "is-active" : ""}`}
+                    key={tab.key}
+                    type="button"
+                    onClick={() => {
+                      setStoreTab(tab.key);
+                      setStoreMessage("");
+                    }}
+                  >
+                    {tab.label}
+                    <span>{tabCounts[tab.key]}</span>
+                  </button>
+                ))}
+              </div>
+
+              <label className="store-search">
+                <Search size={18} />
+                <input
+                  value={storeQuery}
+                  onChange={(event) => setStoreQuery(event.target.value)}
+                  placeholder="店舗を検索"
+                />
+              </label>
+
+              <section className="store-list">
+                {filteredStoreInfoList.length === 0 ? (
+                  <div className="empty-state">
+                    <p>表示できる店舗がありません。</p>
+                  </div>
+                ) : (
+                  filteredStoreInfoList.map((store) => (
+                    <article className="store-card" key={store.name}>
+                      <button
+                        className="store-card-main"
+                        type="button"
+                        onClick={() => selectStoreInfo(store.name)}
+                      >
+                        <div className="store-card-head">
+                          <div>
+                            <p>{store.isRegistered ? "登録店舗" : "自登録店舗"}</p>
+                            <h2>{store.name}</h2>
+                          </div>
+                          <ChevronRight size={18} />
+                        </div>
+                        <dl className="store-card-stats">
+                          <div>
+                            <dt>{monthLabel(currentMonth)}</dt>
+                            <dd className={classForAmount(store.monthProfit)}>
+                              {signedCurrency(store.monthProfit)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>累計</dt>
+                            <dd className={classForAmount(store.totalProfit)}>
+                              {signedCurrency(store.totalProfit)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>貯玉</dt>
+                            <dd>{store.savedText}</dd>
+                          </div>
+                          <div>
+                            <dt>最終</dt>
+                            <dd>{store.lastDate || "記録なし"}</dd>
+                          </div>
+                        </dl>
+                        <p className="store-card-foot">
+                          {store.records.length}件 / {store.totalHours.toFixed(1)}時間
+                        </p>
+                      </button>
+                      <button
+                        className={`favorite-button store-favorite-button ${store.isFavorite ? "is-active" : ""}`}
+                        type="button"
+                        onClick={() => toggleStoreFavorite(store.name)}
+                        title={store.isFavorite ? "お気に入りから外す" : "お気に入りに追加"}
+                        aria-label={`${store.name}を${store.isFavorite ? "お気に入りから外す" : "お気に入りに追加"}`}
+                      >
+                        <Star size={19} />
+                      </button>
+                    </article>
+                  ))
+                )}
+              </section>
+            </>
+          )}
+
+          {isRateEditorOpen && renderRateEditorDialog()}
+        </section>
+      </main>
+    );
   }
 
   if (viewMode === "updates") {
@@ -2197,6 +2880,10 @@ export function App() {
             <button className="text-button" type="button" onClick={openBulkEditor}>
               <Pencil size={18} />
               一括編集
+            </button>
+            <button className="text-button" type="button" onClick={openStoreView}>
+              <Search size={18} />
+              店舗情報
             </button>
           </div>
           <input
@@ -2792,10 +3479,7 @@ export function App() {
                     <button
                       className="icon-button"
                       type="button"
-                      onClick={() => {
-                        setIsRateEditorOpen(false);
-                        setEditingRateId(null);
-                      }}
+                      onClick={closeRateEditor}
                       title="閉じる"
                     >
                       <X size={20} />

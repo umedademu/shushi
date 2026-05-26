@@ -49,6 +49,9 @@ Implemented draft behavior:
 - Move the monthly chart to the previous or next month with buttons that stay linked to the main calendar month.
 - Bulk edit past records for one store by assigning all pachinko records or all slot records to selected store rates.
 - Show rate details such as exchange rate, saved balls, and replay fee when choosing a rate in bulk editing.
+- Add a store information view with favorite, registered, and self-registered store tabs.
+- Show each store's saved-ball summary, monthly profit, total profit, record count, play hours, and last play date.
+- Open a store detail view to edit rate settings, directly update saved-ball counts, start a new play entry for that store, review past records, and review machines played at that store.
 
 ## Saved Fields
 
@@ -111,6 +114,21 @@ Saved balls are updated automatically from each play record:
 - Deleting a play record reverses the same saved-ball change.
 - Editing a play record reverses the old saved-ball change and applies the new one.
 - Bulk editing past records reverses the old rate's saved-ball change and applies it to the newly selected rate.
+- Store detail can also directly overwrite the current saved-ball count for a store-specific rate. This is meant for manual correction when the real balance is known.
+
+## Store Information
+
+The app now has a store information view inspired by pRecord's store tab.
+
+Current scope:
+
+- Favorite stores: stores marked by the user.
+- Registered stores: stores from the app's imported store list.
+- Self-registered stores: stores that appear only in records, rates, or favorites.
+- Store cards show saved balls, monthly profit, total profit, record count, play hours, and the latest play date.
+- Store detail shows rate and saved-ball editing, a button to start a play entry for that store, past play records, and machines played at that store.
+
+Address, opening hours, parking, entrance rules, installed machine lists from external data, and event information are intentionally left for a later phase.
 
 ## Notes
 

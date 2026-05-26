@@ -42,3 +42,5 @@
 - Added bulk editing to assign one store's past pachinko or slot records to selected store rates.
 - Prevented store and machine chart bars from overlapping labels or amount text.
 - Changed bulk editing rate choices to show exchange rate, saved balls, and replay fee details.
+- Added a store information view with favorite, registered, and self-registered tabs.
+- Added store detail pages where saved-ball counts and rate settings can be edited directly, with past records and played machines shown for that store.
