@@ -8,7 +8,7 @@ Implemented draft behavior:
 
 - Show a monthly calendar.
 - Start with today selected.
-- Open the income entry form from the top-right edit icon.
+- Open the income entry form from the edit button in the calendar month navigation row.
 - Save multiple play records for one day.
 - Store records in the browser for now.
 - Use store names and machine names from the existing halldata data as selectable options.
@@ -41,7 +41,7 @@ Implemented draft behavior:
 - Show expected value as a second line in line charts and as a second bar in store and machine rows.
 - Show expected values with plus/minus signs and amount colors.
 - Keep line charts visually light, with thinner lines and points only on days that have records.
-- Use the top-right edit icon as the only entry point for adding a play record.
+- Use the edit button in the calendar month navigation row as the main entry point for adding a play record.
 - Remove the duplicated selected-day add card and tighten the desktop layout.
 - Show the desktop view as a wider single column.
 - Show daily calendar profit in plain yen units with comma separators instead of k units.
@@ -56,6 +56,7 @@ Implemented draft behavior:
 - Open a store detail view to edit rate settings, directly update saved-ball counts, start a new play entry for that store, review past records, and review machines played at that store.
 - Place rate addition buttons inside the store detail rate and saved-ball section, with labels that clearly say they add pachinko or slot rates.
 - Use bottom tabs for the main app areas: monthly calendar, profit analysis, store information, machine information, and other data operations.
+- Keep the main tabs compact by omitting large top headings and placing the profit entry button in the calendar month navigation row.
 - Add actual profit bars on top of the monthly, yearly, and lifetime chart views, while keeping cumulative profit and expected value as lines.
 - Show pRecord-style chart helpers: right-side yen scale labels, guide lines, a simple graph legend, and a performance summary for the current chart range.
 - Show monthly chart and performance headings as numeric year-month labels such as 2026年05月, and keep the profit analysis view free of duplicated top headings.
@@ -108,7 +109,7 @@ The monthly chart uses the same displayed month as the main calendar. Moving the
 
 Expected value is shown together with profit. Trend views show expected value as a second line, while store and machine views show each store or machine name on the left and profit and expected value bars on the right. Trend charts use right-side yen scale labels and guide lines so the current result is easier to read against the zero line. The right-side scale uses clean pRecord-style intervals such as 25,000円, 100,000円, or 200,000円 based on the visible range. The graph keeps only a compact legend below the chart and does not show highest or lowest cards above it. In the store and machine views, the row label, bar area, and amount are separated so long positive or negative bars do not cover text.
 
-Under the trend chart, the app shows a pRecord-style performance summary for the current range. The heading shows the main period result with the yen unit, while the summary includes play count, win rate, wins, losses, draws, play hours, total investment, total recovery, highest investment, highest recovery, average amount, saved-ball totals, hourly profit, expected value input count, expected value total, and expected value average.
+Under the trend chart, the app shows a pRecord-style performance summary for the current range. The heading shows the main period result with the yen unit, while the summary includes play count, win rate, wins, losses, draws, play hours, total investment, total recovery, highest investment, highest recovery, average amount, saved-ball totals, hourly profit, expected value input count, expected value total, and expected value average. The heading and summary card spacing are tuned for narrow phone widths, and the desktop profit analysis view uses a wider single-column frame.
 
 ## Rate Settings
 

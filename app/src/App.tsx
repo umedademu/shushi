@@ -343,6 +343,16 @@ const updateItems = [
     title: "収支グラフの目盛りをpRecord風に調整",
     body: "収支グラフの横線と右側の円表示を、表示中の収支幅に合わせて25,000円や200,000円などのきれいな区切りで自動表示するようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "収支分析のスマホ表示を調整",
+    body: "収支分析の成績見出しとサマリーを、スマホ幅でも年月と大きな収支額が崩れにくい余白と文字サイズに調整しました。PC幅では分析画面を少し広く表示するようにしました。",
+  },
+  {
+    date: "2026-05-26",
+    title: "各タブ上部の見出しを削除",
+    body: "カレンダー、店舗情報、機種情報、その他の上部見出しを削除し、収支入力ボタンを月移動の行へまとめて表示面積を広げました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -2447,21 +2457,6 @@ export function App() {
     return (
       <main className="app-shell">
         <section className="phone-frame store-frame">
-          <header className="top-bar">
-            {selectedStoreInfo ? (
-              <button className="icon-button" type="button" onClick={closeStoreDetail} title="一覧へ戻る">
-                <ChevronLeft size={20} />
-              </button>
-            ) : (
-              <div className="top-spacer" />
-            )}
-            <div>
-              <p className="eyebrow">店舗情報</p>
-              <h1>{selectedStoreInfo ? selectedStoreInfo.name : "店舗一覧"}</h1>
-            </div>
-            <div className="top-spacer" />
-          </header>
-
           {selectedStoreInfo ? (
             <div className="store-detail">
               <button className="text-button store-back-button" type="button" onClick={closeStoreDetail}>
@@ -2967,36 +2962,31 @@ export function App() {
       <section className="phone-frame dashboard-frame">
         {viewMode === "home" && (
         <div className="dashboard-left">
-          <header className="top-bar">
-            <div>
-              <p className="eyebrow">shushi</p>
-              <h1>収支管理</h1>
-            </div>
-            <button
-              aria-label="収支を入力"
-              className="icon-button primary"
-              type="button"
-              onClick={() => openEditor()}
-              title="収支を入力"
-            >
-              <Pencil size={20} />
-            </button>
-          </header>
-
           <section className="month-panel">
             <div className="month-header">
-              <button className="icon-button" type="button" onClick={() => moveMonth(-1)} title="前の月">
+              <button className="icon-button month-nav-button" type="button" onClick={() => moveMonth(-1)} title="前の月">
                 <ChevronLeft size={20} />
               </button>
-              <div>
+              <div className="month-heading">
                 <p className="month-label">{monthLabel(currentMonth)}</p>
                 <p className={`month-total ${classForAmount(monthProfit)}`}>
                   {signedCurrency(monthProfit)}
                 </p>
               </div>
-              <button className="icon-button" type="button" onClick={() => moveMonth(1)} title="次の月">
-                <ChevronRight size={20} />
-              </button>
+              <div className="month-actions">
+                <button className="icon-button month-nav-button" type="button" onClick={() => moveMonth(1)} title="次の月">
+                  <ChevronRight size={20} />
+                </button>
+                <button
+                  aria-label="収支を入力"
+                  className="icon-button primary month-edit-button"
+                  type="button"
+                  onClick={() => openEditor()}
+                  title="収支を入力"
+                >
+                  <Pencil size={20} />
+                </button>
+              </div>
             </div>
 
             <div className="week-row">
@@ -3039,26 +3029,6 @@ export function App() {
         )}
 
         <div className="dashboard-right">
-        {viewMode === "machines" && (
-          <header className="top-bar">
-            <div>
-              <p className="eyebrow">機種情報</p>
-              <h1>機種一覧</h1>
-            </div>
-            <div className="top-spacer" />
-          </header>
-        )}
-
-        {viewMode === "other" && (
-          <header className="top-bar">
-            <div>
-              <p className="eyebrow">その他</p>
-              <h1>データ操作</h1>
-            </div>
-            <div className="top-spacer" />
-          </header>
-        )}
-
         {viewMode === "home" && (
         <section className="summary-grid">
           <div>

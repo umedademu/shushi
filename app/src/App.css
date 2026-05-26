@@ -220,6 +220,31 @@ h3 {
   padding: 14px;
 }
 
+.month-header {
+  gap: 8px;
+}
+
+.month-heading {
+  min-width: 0;
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.month-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.month-header .icon-button {
+  width: 40px;
+  height: 40px;
+}
+
+.month-edit-button {
+  box-shadow: 0 6px 16px rgba(21, 106, 86, 0.18);
+}
+
 .month-label {
   color: #15231f;
   font-size: 18px;
@@ -488,6 +513,7 @@ h3 {
 }
 
 .chart-score-head {
+  min-width: 0;
   align-items: center;
   display: flex;
   justify-content: space-between;
@@ -495,7 +521,9 @@ h3 {
 }
 
 .chart-score-head h3 {
+  min-width: 0;
   font-size: 22px;
+  white-space: nowrap;
 }
 
 .chart-score-head strong {
@@ -503,6 +531,7 @@ h3 {
   font-size: 34px;
   font-weight: 900;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .chart-score-grid {
@@ -1860,10 +1889,14 @@ h3 {
   }
 
   .dashboard-frame {
-    max-width: 680px;
+    max-width: 760px;
     display: flex;
     flex-direction: column;
     gap: 14px;
+  }
+
+  .bottom-tabs {
+    max-width: 760px;
   }
 
   .dashboard-left,
@@ -1907,10 +1940,70 @@ h3 {
   }
 }
 
+@media (max-width: 430px) {
+  .chart-score-head {
+    gap: 8px;
+  }
+
+  .chart-score-head h3 {
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  .chart-score-head strong {
+    font-size: clamp(29px, 8vw, 32px);
+  }
+
+  .chart-line-wrap,
+  .chart-bar-wrap {
+    padding: 9px 6px 8px;
+  }
+
+  .chart-y-label {
+    font-size: 10px;
+  }
+
+  .chart-score-grid {
+    gap: 7px;
+  }
+
+  .chart-score-grid div {
+    min-height: 40px;
+    grid-template-columns: minmax(50px, auto) minmax(0, 1fr);
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  .chart-score-grid span {
+    font-size: 11px;
+  }
+
+  .chart-score-grid strong {
+    font-size: 15px;
+  }
+}
+
 @media (max-width: 390px) {
   .phone-frame {
     padding-left: 10px;
     padding-right: 10px;
+  }
+
+  .month-header {
+    gap: 6px;
+  }
+
+  .month-actions {
+    gap: 6px;
+  }
+
+  .month-header .icon-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .month-label {
+    font-size: 17px;
   }
 
   .summary-grid {
@@ -1934,5 +2027,21 @@ h3 {
 
   .store-machine-row > div:last-child {
     text-align: left;
+  }
+}
+
+@media (max-width: 360px) {
+  .chart-score-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .chart-score-head strong {
+    align-self: flex-end;
+  }
+
+  .chart-score-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -57,3 +57,5 @@
 - Changed monthly chart and performance headings from "this month" wording to numeric year-month labels, kept the performance heading visible on empty months, and removed duplicated analysis headings above the chart.
 - Added the yen unit to the large performance result amount in the profit analysis summary.
 - Changed profit chart grid lines and right-side scale labels to use pRecord-style clean yen intervals that adapt to the visible range.
+- Adjusted the profit analysis layout for phone and desktop widths so the numeric month heading, large result amount, and summary cards fit more cleanly.
+- Removed the large top headings from the main tabs and moved the profit entry button into the calendar month navigation row.
