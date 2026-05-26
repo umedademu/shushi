@@ -558,7 +558,7 @@ h3 {
 }
 
 .chart-grid-line {
-  stroke: #dfe9e5;
+  stroke: #d1d7d5;
   stroke-width: 1;
 }
 
@@ -573,14 +573,14 @@ h3 {
 }
 
 .chart-zero-line {
-  stroke: #91a19c;
-  stroke-width: 1.4;
+  stroke: #a9afad;
+  stroke-width: 1.8;
 }
 
 .chart-y-label {
-  fill: #72807c;
-  font-size: 9px;
-  font-weight: 800;
+  fill: #737b7d;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .chart-zero-label {

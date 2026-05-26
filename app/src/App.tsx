@@ -338,6 +338,11 @@ const updateItems = [
     title: "成績の大きな収支に円を表示",
     body: "収支分析の成績見出し横に出る大きな収支額にも、+440,215円のように円を付けて表示するようにしました。",
   },
+  {
+    date: "2026-05-26",
+    title: "収支グラフの目盛りをpRecord風に調整",
+    body: "収支グラフの横線と右側の円表示を、表示中の収支幅に合わせて25,000円や200,000円などのきれいな区切りで自動表示するようにしました。",
+  },
 ];
 
 const chartModes: Array<{ key: ChartMode; label: string }> = [
@@ -396,6 +401,10 @@ function currency(value: number) {
 function signedCurrency(value: number) {
   const sign = value > 0 ? "+" : "";
   return `${sign}${currency(value)}`;
+}
+
+function axisCurrency(value: number) {
+  return `${Math.round(value).toLocaleString("ja-JP")}円`;
 }
 
 function signedPlainAmount(value: number) {
@@ -743,6 +752,40 @@ function groupChart(records: PlayRecord[], field: "storeName" | "machineName"): 
 
 function chartPointPath(points: Array<ChartPlotPoint & { x: number; y: number }>) {
   return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+}
+
+function niceChartStep(maxAbsValue: number) {
+  if (maxAbsValue <= 0) {
+    return 1000;
+  }
+
+  const magnitude = 10 ** Math.floor(Math.log10(maxAbsValue));
+  const bases = [1, 2, 2.5, 5, 10];
+  let power = magnitude / 10;
+
+  while (power < magnitude * 1000) {
+    for (const base of bases) {
+      const step = base * power;
+      if (maxAbsValue <= step * 2.4) {
+        return step;
+      }
+    }
+    power *= 10;
+  }
+
+  return magnitude;
+}
+
+function trendChartScale(values: number[]) {
+  const maxAbsValue = Math.max(0, ...values.map((value) => Math.abs(value)));
+  const step = niceChartStep(maxAbsValue);
+  const gridValues = [2, 1, 0, -1, -2].map((multiple) => multiple * step);
+
+  return {
+    gridValues,
+    max: step * 2.4,
+    min: -step * 2.4,
+  };
 }
 
 function horizontalPosition(value: number, minValue: number, maxValue: number) {
@@ -1339,11 +1382,12 @@ export function App() {
         ? [point.plotValue, point.expectedPlotValue, point.value]
         : [point.plotValue, point.expectedPlotValue],
     );
+    const scale = isTrend ? trendChartScale(plotValues) : null;
     const rawMin = Math.min(0, ...plotValues);
     const rawMax = Math.max(0, ...plotValues);
     const rangePadding = rawMin === rawMax ? 1000 : (rawMax - rawMin) * 0.12;
-    const plotMin = rawMin - rangePadding;
-    const plotMax = rawMax + rangePadding;
+    const plotMin = scale ? scale.min : rawMin - rangePadding;
+    const plotMax = scale ? scale.max : rawMax + rangePadding;
     const barValues = linePoints.flatMap((point) => [point.value, point.expectedValue]);
     const barMin = Math.min(0, ...barValues);
     const barMax = Math.max(0, ...barValues);
@@ -1354,6 +1398,7 @@ export function App() {
       barMin,
       count,
       expectedTotal,
+      gridValues: scale?.gridValues ?? [],
       isTrend,
       linePoints,
       plotMax,
@@ -1382,6 +1427,12 @@ export function App() {
         y: toY(point.plotValue),
       };
     });
+    const gridLines = chartData.gridValues.map((value) => ({
+      key: String(value),
+      label: axisCurrency(value),
+      value,
+      y: toY(value),
+    }));
     const guideCoordinates = coordinates.filter((point) => {
       const pointNumber = Number(point.label.replace(/\D/g, ""));
       if (chartMode === "month") {
@@ -1431,6 +1482,7 @@ export function App() {
       coordinates,
       expectedLinePath,
       guideCoordinates,
+      gridLines,
       linePath,
       zeroY,
     };
@@ -3093,20 +3145,25 @@ export function App() {
                       role="img"
                       viewBox={`0 0 ${chartSvgWidth} ${chartSvgHeight}`}
                     >
-                      <line
-                        className="chart-grid-line"
-                        x1={chartPadding.left}
-                        x2={chartSvgWidth - chartPadding.right}
-                        y1={chartPadding.top}
-                        y2={chartPadding.top}
-                      />
-                      <line
-                        className="chart-grid-line chart-grid-line-bottom"
-                        x1={chartPadding.left}
-                        x2={chartSvgWidth - chartPadding.right}
-                        y1={chartSvgHeight - chartPadding.bottom}
-                        y2={chartSvgHeight - chartPadding.bottom}
-                      />
+                      {chartGeometry.gridLines.map((line) => (
+                        <g key={`${line.key}-grid`}>
+                          <line
+                            className={line.value === 0 ? "chart-zero-line" : "chart-grid-line"}
+                            x1={chartPadding.left}
+                            x2={chartSvgWidth - chartPadding.right}
+                            y1={line.y}
+                            y2={line.y}
+                          />
+                          <text
+                            className={`chart-y-label ${line.value === 0 ? "chart-zero-label" : ""}`}
+                            textAnchor="start"
+                            x={chartSvgWidth - chartPadding.right + 8}
+                            y={line.y + 4}
+                          >
+                            {line.label}
+                          </text>
+                        </g>
+                      ))}
                       {chartGeometry.guideCoordinates.map((point) => (
                         <line
                           className="chart-guide-line"
@@ -3117,37 +3174,6 @@ export function App() {
                           y2={chartSvgHeight - chartPadding.bottom}
                         />
                       ))}
-                      <line
-                        className="chart-zero-line"
-                        x1={chartPadding.left}
-                        x2={chartSvgWidth - chartPadding.right}
-                        y1={chartGeometry.zeroY}
-                        y2={chartGeometry.zeroY}
-                      />
-                      <text
-                        className="chart-y-label"
-                        textAnchor="end"
-                        x={chartSvgWidth - 4}
-                        y={chartPadding.top + 4}
-                      >
-                        {signedCurrency(Math.round(chartData.plotMax))}
-                      </text>
-                      <text
-                        className="chart-y-label chart-zero-label"
-                        textAnchor="end"
-                        x={chartSvgWidth - 4}
-                        y={chartGeometry.zeroY + 4}
-                      >
-                        0円
-                      </text>
-                      <text
-                        className="chart-y-label"
-                        textAnchor="end"
-                        x={chartSvgWidth - 4}
-                        y={chartSvgHeight - chartPadding.bottom + 4}
-                      >
-                        {signedCurrency(Math.round(chartData.plotMin))}
-                      </text>
                       {chartGeometry.areaPath && (
                         <path className="chart-line-area" d={chartGeometry.areaPath} />
                       )}

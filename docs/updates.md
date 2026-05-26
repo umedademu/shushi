@@ -56,3 +56,4 @@
 - Simplified the profit analysis screen toward pRecord's layout by removing the amount-heavy legend and highest/lowest cards, then showing the main period result beside the performance heading with average amount and expected value totals inside the summary.
 - Changed monthly chart and performance headings from "this month" wording to numeric year-month labels, kept the performance heading visible on empty months, and removed duplicated analysis headings above the chart.
 - Added the yen unit to the large performance result amount in the profit analysis summary.
+- Changed profit chart grid lines and right-side scale labels to use pRecord-style clean yen intervals that adapt to the visible range.
