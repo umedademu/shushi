@@ -63,6 +63,7 @@ Implemented draft behavior:
 - Save the shared app state to Cloudflare D1 through a public Worker endpoint.
 - Upload existing browser-local data to the cloud on first load when the cloud data is empty.
 - Show cloud storage status and manual cloud load/save controls in the Other tab.
+- Fill the play entry form with the previous store and rate by default, and switch to the last used rate for a store when that store is selected.
 
 ## Main Layout
 

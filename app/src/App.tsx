@@ -155,6 +155,11 @@ const cloudApiBaseUrl = (
 const updateItems = [
   {
     date: "2026-06-09",
+    title: "前回の店舗とレートを初期入力に反映",
+    body: "収支入力を開いた時に前回使った店舗とレートを入れ、店舗を選ぶとその店舗で前回使ったレートを自動で選ぶようにしました。",
+  },
+  {
+    date: "2026-06-09",
     title: "クラウド保存を追加",
     body: "Cloudflare D1へ収支データを保存し、PCとスマホで同じデータを使えるようにしました。端末内の既存データもクラウドへ移せます。",
   },
@@ -2053,10 +2058,69 @@ export function App() {
     );
   }
 
+  function previousRecord(storeName?: string) {
+    for (let index = records.length - 1; index >= 0; index -= 1) {
+      const record = records[index];
+      if (!storeName || record.storeName === storeName) {
+        return record;
+      }
+    }
+
+    return null;
+  }
+
+  function rateFromPreviousRecord(record: PlayRecord | null) {
+    if (!record) {
+      return null;
+    }
+
+    return (
+      rateOptions.find((rate) => rate.storeName === record.storeName && rate.id === record.rateId) ??
+      rateOptions.find(
+        (rate) =>
+          rate.storeName === record.storeName &&
+          rate.name === record.rateName &&
+          (!record.rateKind || rate.kind === record.rateKind),
+      ) ??
+      null
+    );
+  }
+
+  function createFormWithPreviousValues(date: string, isFirstRecordForDay: boolean, storeName?: string) {
+    const baseForm = createForm(date, isFirstRecordForDay);
+    const record = previousRecord(storeName);
+    const rate = rateFromPreviousRecord(record);
+    const nextStoreName = storeName ?? record?.storeName ?? "";
+
+    return {
+      ...baseForm,
+      storeName: nextStoreName,
+      rateId: rate?.id ?? "",
+      rateName: rate?.name ?? "",
+    };
+  }
+
+  function applyStoreToForm(current: RecordForm, storeName: string) {
+    if (current.storeName === storeName) {
+      return {
+        ...current,
+        storeName,
+      };
+    }
+
+    const rate = rateFromPreviousRecord(previousRecord(storeName));
+    return {
+      ...current,
+      storeName,
+      rateId: rate?.id ?? "",
+      rateName: rate?.name ?? "",
+    };
+  }
+
   function openEditor(date = selectedDate) {
     const isFirstRecordForDay = !records.some((record) => record.date === date);
     setEditingRecordId(null);
-    setForm(createForm(date, isFirstRecordForDay));
+    setForm(createFormWithPreviousValues(date, isFirstRecordForDay));
     setIsEditorOpen(true);
   }
 
@@ -2064,10 +2128,7 @@ export function App() {
     const isFirstRecordForDay = !records.some((record) => record.date === selectedDate);
     setViewMode("home");
     setEditingRecordId(null);
-    setForm({
-      ...createForm(selectedDate, isFirstRecordForDay),
-      storeName,
-    });
+    setForm(createFormWithPreviousValues(selectedDate, isFirstRecordForDay, storeName));
     setIsEditorOpen(true);
   }
 
@@ -2136,12 +2197,7 @@ export function App() {
     }
 
     if (selectorField === "storeName") {
-      setForm((current) => ({
-        ...current,
-        storeName: value,
-        rateId: current.storeName === value ? current.rateId : "",
-        rateName: current.storeName === value ? current.rateName : "",
-      }));
+      setForm((current) => applyStoreToForm(current, value));
     } else {
       updateForm(selectorField, value);
     }

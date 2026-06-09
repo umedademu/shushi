@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Added automatic defaults for the previous store and rate when opening the play entry form.
+- Added automatic rate selection based on the last play record for the selected store.
 - Added Cloudflare D1 cloud storage for the app state.
 - Added a public Cloudflare Worker endpoint for reading and saving the shared personal data.
 - Added automatic first-load migration from browser storage to cloud storage when the cloud data is empty.
