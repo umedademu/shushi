@@ -60,6 +60,9 @@ Implemented draft behavior:
 - Add actual profit bars on top of the monthly, yearly, and lifetime chart views, while keeping cumulative profit and expected value as lines.
 - Show pRecord-style chart helpers: right-side yen scale labels, guide lines, a simple graph legend, and a performance summary for the current chart range.
 - Show monthly chart and performance headings as numeric year-month labels such as 2026年05月, and keep the profit analysis view free of duplicated top headings.
+- Save the shared app state to Cloudflare D1 through a public Worker endpoint.
+- Upload existing browser-local data to the cloud on first load when the cloud data is empty.
+- Show cloud storage status and manual cloud load/save controls in the Other tab.
 
 ## Main Layout
 
@@ -158,4 +161,4 @@ Address, opening hours, parking, entrance rules, installed machine lists from ex
 
 CSV import replaces existing records for any date included in the CSV, while leaving dates not included in the CSV unchanged. pRecord CSV rows are imported when date, store, and machine are present. When pRecord has a saved-ball difference and profit value, the app estimates a rate value from those numbers and stores cash investment/recovery as 0 while filling saved-ball investment/recovery from pRecord investment/recovery.
 
-The current browser-only storage is for the draft stage. For PC and smartphone sync, move the same data shape to Cloudflare D1 later.
+The app now uses Cloudflare D1 as the shared cloud store and keeps browser-local storage as a fallback copy. The current personal-use setup does not use an app-level login or passcode, so anyone with access to the frontend and Worker endpoint can read or overwrite the shared data.

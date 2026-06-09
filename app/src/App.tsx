@@ -16,7 +16,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { ChangeEvent, CSSProperties, FormEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { machineOptions, storeOptions } from "./data/catalog";
 
@@ -132,12 +132,32 @@ type StoreInfo = {
   machines: StoreMachineSummary[];
 };
 
+type AppState = {
+  records: PlayRecord[];
+  rateOptions: RateOption[];
+  favoriteStores: string[];
+  favoriteMachines: string[];
+};
+
+type CloudStateResponse = {
+  state?: Partial<AppState>;
+  updatedAt?: string;
+};
+
 const storageKey = "shushi-play-records";
 const rateOptionKey = "shushi-store-rate-options";
 const favoriteStoreKey = "shushi-favorite-stores";
 const favoriteMachineKey = "shushi-favorite-machines";
+const cloudApiBaseUrl = (
+  import.meta.env.VITE_SHUSHI_CLOUD_API_URL || "https://shushi-cloud.umedademu.workers.dev"
+).replace(/\/+$/u, "");
 
 const updateItems = [
+  {
+    date: "2026-06-09",
+    title: "クラウド保存を追加",
+    body: "Cloudflare D1へ収支データを保存し、PCとスマホで同じデータを使えるようにしました。端末内の既存データもクラウドへ移せます。",
+  },
   {
     date: "2026-05-24",
     title: "収支入力の叩き台を追加",
@@ -452,33 +472,7 @@ function loadRateOptions(): RateOption[] {
       return [];
     }
 
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed
-      .map((item) => {
-        const storeName = String(item?.storeName ?? "").trim();
-        const name = String(item?.name ?? "").trim();
-        const kind = item?.kind;
-
-        if (!storeName || !name || !isRateKind(kind)) {
-          return null;
-        }
-
-        return {
-          id: String(item?.id || crypto.randomUUID()),
-          storeName,
-          kind,
-          name,
-          unitPrice: Number(item?.unitPrice) || 0,
-          exchangeCountPer100Yen: Number(item?.exchangeCountPer100Yen) || 0,
-          savedCount: Number(item?.savedCount) || 0,
-          replayFeePercent: Number(item?.replayFeePercent) || 0,
-        };
-      })
-      .filter((item): item is RateOption => Boolean(item));
+    return normalizeRateOptions(JSON.parse(raw));
   } catch {
     return [];
   }
@@ -495,10 +489,7 @@ function loadStringList(key: string): string[] {
       return [];
     }
 
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.map((value) => String(value).trim()).filter(Boolean)
-      : [];
+    return normalizeStringList(JSON.parse(raw));
   } catch {
     return [];
   }
@@ -506,6 +497,94 @@ function loadStringList(key: string): string[] {
 
 function saveStringList(key: string, values: string[]) {
   window.localStorage.setItem(key, JSON.stringify(values));
+}
+
+function normalizeStringList(values: unknown): string[] {
+  return Array.isArray(values)
+    ? values.map((value) => String(value).trim()).filter(Boolean)
+    : [];
+}
+
+function normalizeRateOptions(values: unknown): RateOption[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return values
+    .map((item) => {
+      const storeName = String(item?.storeName ?? "").trim();
+      const name = String(item?.name ?? "").trim();
+      const kind = item?.kind;
+
+      if (!storeName || !name || !isRateKind(kind)) {
+        return null;
+      }
+
+      return {
+        id: String(item?.id || crypto.randomUUID()),
+        storeName,
+        kind,
+        name,
+        unitPrice: Number(item?.unitPrice) || 0,
+        exchangeCountPer100Yen: Number(item?.exchangeCountPer100Yen) || 0,
+        savedCount: Number(item?.savedCount) || 0,
+        replayFeePercent: Number(item?.replayFeePercent) || 0,
+      };
+    })
+    .filter((item): item is RateOption => Boolean(item));
+}
+
+function normalizeAppState(state: Partial<AppState> | undefined): AppState {
+  return {
+    records: Array.isArray(state?.records) ? state.records : [],
+    rateOptions: normalizeRateOptions(state?.rateOptions),
+    favoriteStores: normalizeStringList(state?.favoriteStores),
+    favoriteMachines: normalizeStringList(state?.favoriteMachines),
+  };
+}
+
+function hasAppStateData(state: AppState) {
+  return (
+    state.records.length > 0 ||
+    state.rateOptions.length > 0 ||
+    state.favoriteStores.length > 0 ||
+    state.favoriteMachines.length > 0
+  );
+}
+
+function saveAppStateToLocal(state: AppState) {
+  saveRecords(state.records);
+  saveRateOptions(state.rateOptions);
+  saveStringList(favoriteStoreKey, state.favoriteStores);
+  saveStringList(favoriteMachineKey, state.favoriteMachines);
+}
+
+async function readCloudState(): Promise<CloudStateResponse> {
+  const response = await fetch(`${cloudApiBaseUrl}/state`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("クラウドから読み込めませんでした。");
+  }
+
+  return response.json();
+}
+
+async function writeCloudState(state: AppState): Promise<CloudStateResponse> {
+  const response = await fetch(`${cloudApiBaseUrl}/state`, {
+    body: JSON.stringify(state),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "PUT",
+  });
+
+  if (!response.ok) {
+    throw new Error("クラウドへ保存できませんでした。");
+  }
+
+  return response.json();
 }
 
 function createForm(date: string, isFirstRecordForDay = false): RecordForm {
@@ -1219,6 +1298,7 @@ function parseRecordsFromCsv(text: string) {
 
 export function App() {
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const cloudSaveTimerRef = useRef<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -1251,8 +1331,135 @@ export function App() {
   const [rateEditorStoreName, setRateEditorStoreName] = useState<string | null>(null);
   const [savedCountDrafts, setSavedCountDrafts] = useState<Record<string, string>>({});
   const [storeMessage, setStoreMessage] = useState("");
+  const [cloudReady, setCloudReady] = useState(false);
+  const [isCloudBusy, setIsCloudBusy] = useState(false);
+  const [cloudMessage, setCloudMessage] = useState("クラウドへ接続しています。");
+  const [lastCloudSavedAt, setLastCloudSavedAt] = useState("");
 
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
+
+  function currentAppState(): AppState {
+    return {
+      records,
+      rateOptions,
+      favoriteStores,
+      favoriteMachines,
+    };
+  }
+
+  function applyAppState(state: AppState) {
+    setRecords(state.records);
+    setRateOptions(state.rateOptions);
+    setFavoriteStores(state.favoriteStores);
+    setFavoriteMachines(state.favoriteMachines);
+    saveAppStateToLocal(state);
+  }
+
+  async function loadFromCloud() {
+    setIsCloudBusy(true);
+    try {
+      const response = await readCloudState();
+      const nextState = normalizeAppState(response.state);
+      applyAppState(nextState);
+      setCloudReady(true);
+      setLastCloudSavedAt(response.updatedAt || "");
+      setCloudMessage(
+        hasAppStateData(nextState)
+          ? "クラウドから読み込みました。"
+          : "クラウドはまだ空です。",
+      );
+    } catch {
+      setCloudMessage("クラウドへ接続できませんでした。端末内保存で動作しています。");
+    } finally {
+      setIsCloudBusy(false);
+    }
+  }
+
+  async function saveCurrentStateToCloud(message = "クラウドへ保存しました。") {
+    setIsCloudBusy(true);
+    try {
+      const response = await writeCloudState(currentAppState());
+      setCloudReady(true);
+      setLastCloudSavedAt(response.updatedAt || new Date().toLocaleString("ja-JP"));
+      setCloudMessage(message);
+    } catch {
+      setCloudMessage("クラウドへ保存できませんでした。端末内には保存されています。");
+    } finally {
+      setIsCloudBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function initializeCloud() {
+      const localState = currentAppState();
+
+      try {
+        const response = await readCloudState();
+        if (isCancelled) {
+          return;
+        }
+
+        const cloudState = normalizeAppState(response.state);
+        if (!hasAppStateData(cloudState) && hasAppStateData(localState)) {
+          const saved = await writeCloudState(localState);
+          if (isCancelled) {
+            return;
+          }
+          setCloudReady(true);
+          setLastCloudSavedAt(saved.updatedAt || new Date().toLocaleString("ja-JP"));
+          setCloudMessage("端末内の既存データをクラウドへ移しました。");
+          return;
+        }
+
+        if (hasAppStateData(cloudState)) {
+          applyAppState(cloudState);
+          setLastCloudSavedAt(response.updatedAt || "");
+          setCloudMessage("クラウドから読み込みました。");
+        } else {
+          setCloudMessage("クラウドはまだ空です。");
+        }
+        setCloudReady(true);
+      } catch {
+        if (!isCancelled) {
+          setCloudMessage("クラウドへ接続できませんでした。端末内保存で動作しています。");
+        }
+      }
+    }
+
+    initializeCloud();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cloudReady) {
+      return;
+    }
+
+    if (cloudSaveTimerRef.current) {
+      window.clearTimeout(cloudSaveTimerRef.current);
+    }
+
+    cloudSaveTimerRef.current = window.setTimeout(async () => {
+      try {
+        const response = await writeCloudState(currentAppState());
+        setLastCloudSavedAt(response.updatedAt || new Date().toLocaleString("ja-JP"));
+        setCloudMessage("クラウドへ保存しました。");
+      } catch {
+        setCloudMessage("クラウドへ保存できませんでした。端末内には保存されています。");
+      }
+    }, 700);
+
+    return () => {
+      if (cloudSaveTimerRef.current) {
+        window.clearTimeout(cloudSaveTimerRef.current);
+      }
+    };
+  }, [cloudReady, records, rateOptions, favoriteStores, favoriteMachines]);
 
   const selectedRecords = useMemo(
     () =>
@@ -3302,6 +3509,33 @@ export function App() {
 
         {viewMode === "other" && (
         <section className="csv-panel">
+          <div className="cloud-panel">
+            <div>
+              <p className="eyebrow">クラウド保存</p>
+              <h2>共有データ</h2>
+              <p>{cloudMessage}</p>
+              {lastCloudSavedAt && <span>最終更新 {lastCloudSavedAt}</span>}
+            </div>
+            <div className="cloud-actions">
+              <button
+                className="text-button"
+                type="button"
+                disabled={isCloudBusy}
+                onClick={loadFromCloud}
+              >
+                クラウドから読込
+              </button>
+              <button
+                className="text-button"
+                type="button"
+                disabled={isCloudBusy}
+                onClick={() => saveCurrentStateToCloud("端末データをクラウドへ保存しました。")}
+              >
+                端末データを保存
+              </button>
+            </div>
+          </div>
+
           <div className="csv-buttons">
             <button className="text-button" type="button" onClick={() => csvInputRef.current?.click()}>
               <Upload size={18} />

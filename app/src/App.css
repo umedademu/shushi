@@ -1841,6 +1841,47 @@ h3 {
   margin: 0;
 }
 
+.cloud-panel {
+  border: 1px solid #d8e4df;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.cloud-panel h2 {
+  color: #14231f;
+  font-size: 17px;
+  line-height: 1.35;
+  margin: 2px 0 6px;
+}
+
+.cloud-panel p {
+  color: #40504c;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.cloud-panel span {
+  color: #60706b;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.cloud-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cloud-actions .text-button {
+  justify-content: center;
+}
+
 .updates-list {
   display: grid;
   gap: 10px;

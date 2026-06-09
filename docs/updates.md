@@ -1,5 +1,12 @@
 # Updates
 
+## 2026-06-09
+
+- Added Cloudflare D1 cloud storage for the app state.
+- Added a public Cloudflare Worker endpoint for reading and saving the shared personal data.
+- Added automatic first-load migration from browser storage to cloud storage when the cloud data is empty.
+- Added cloud status, manual cloud load, and manual device-to-cloud save controls to the Other tab.
+
 ## 2026-05-24
 
 - Added the first mobile-first draft of the profit tracking app.

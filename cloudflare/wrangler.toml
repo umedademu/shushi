@@ -1,0 +1,9 @@
+name = "shushi-cloud"
+main = "src/worker.js"
+compatibility_date = "2026-06-09"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "shushi"
+database_id = "7db49ba8-3510-4566-bb4d-a998d4e76c04"
