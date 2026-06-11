@@ -7,6 +7,12 @@ const defaultState = {
   favoriteMachines: [],
 };
 
+const machineNameAliases = new Map([
+  ["ファンキージャグラー2KT", "ファンキージャグラー2"],
+  ["ファンキージャグラー２ＫＴ", "ファンキージャグラー2"],
+  ["ファンキージャグラー２", "ファンキージャグラー2"],
+]);
+
 const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Allow-Methods": "GET,PUT,OPTIONS",
@@ -30,6 +36,23 @@ function normalizeStringList(values) {
     : [];
 }
 
+function normalizeMachineName(value) {
+  const normalized = String(value || "").trim();
+  return machineNameAliases.get(normalized) || normalized;
+}
+
+function normalizeMachineList(values) {
+  return [...new Set(normalizeStringList(values).map(normalizeMachineName).filter(Boolean))];
+}
+
+function normalizeRecords(values) {
+  return normalizeArray(values).map((record) =>
+    record && typeof record === "object"
+      ? { ...record, machineName: normalizeMachineName(record.machineName) }
+      : record,
+  );
+}
+
 function normalizeArray(values) {
   return Array.isArray(values) ? values : [];
 }
@@ -37,10 +60,10 @@ function normalizeArray(values) {
 function normalizeState(value) {
   const source = value && typeof value === "object" ? value : {};
   return {
-    records: normalizeArray(source.records),
+    records: normalizeRecords(source.records),
     rateOptions: normalizeArray(source.rateOptions),
     favoriteStores: normalizeStringList(source.favoriteStores),
-    favoriteMachines: normalizeStringList(source.favoriteMachines),
+    favoriteMachines: normalizeMachineList(source.favoriteMachines),
   };
 }
 

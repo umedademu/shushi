@@ -35,6 +35,8 @@ Current Cloudflare resources:
 
 The app still keeps a browser-local copy as a fallback. On first load, if cloud data is empty and browser-local data exists, the browser-local data is uploaded to the cloud.
 
+Both the frontend and Worker normalize machine names before saving app state, so Funky Juggler 2KT and full-width variants are stored as Funky Juggler 2.
+
 ## SaaS Phase
 
 When opening the app to many users, add proper authentication and store records per user.

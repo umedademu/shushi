@@ -148,11 +148,21 @@ const storageKey = "shushi-play-records";
 const rateOptionKey = "shushi-store-rate-options";
 const favoriteStoreKey = "shushi-favorite-stores";
 const favoriteMachineKey = "shushi-favorite-machines";
+const machineNameAliases = new Map([
+  ["ファンキージャグラー2KT", "ファンキージャグラー2"],
+  ["ファンキージャグラー２ＫＴ", "ファンキージャグラー2"],
+  ["ファンキージャグラー２", "ファンキージャグラー2"],
+]);
 const cloudApiBaseUrl = (
   import.meta.env.VITE_SHUSHI_CLOUD_API_URL || "https://shushi-cloud.umedademu.workers.dev"
 ).replace(/\/+$/u, "");
 
 const updateItems = [
+  {
+    date: "2026-06-11",
+    title: "ファンキージャグラー2の表記を統一",
+    body: "ファンキージャグラー2KTなどの表記をファンキージャグラー2へ統一し、保存済みデータやCSV取り込みでも同じ機種として扱うようにしました。",
+  },
   {
     date: "2026-06-11",
     title: "保存して次へを追加",
@@ -453,6 +463,34 @@ function signedPlainAmount(value: number) {
   return `${sign}${rounded.toLocaleString("ja-JP")}`;
 }
 
+function normalizeMachineName(value: string) {
+  const normalized = value.trim();
+  return machineNameAliases.get(normalized) ?? normalized;
+}
+
+function normalizeMachineList(values: unknown): string[] {
+  const names = normalizeStringList(values).map(normalizeMachineName).filter(Boolean);
+  return Array.from(new Set(names));
+}
+
+function normalizeRecords(values: unknown): PlayRecord[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return values.map((record) => {
+    if (!record || typeof record !== "object") {
+      return record as PlayRecord;
+    }
+
+    const item = record as Partial<PlayRecord>;
+    return {
+      ...item,
+      machineName: normalizeMachineName(String(item.machineName ?? "")),
+    } as PlayRecord;
+  });
+}
+
 function loadRecords(): PlayRecord[] {
   try {
     const raw = window.localStorage.getItem(storageKey);
@@ -461,14 +499,14 @@ function loadRecords(): PlayRecord[] {
     }
 
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return normalizeRecords(parsed);
   } catch {
     return [];
   }
 }
 
 function saveRecords(records: PlayRecord[]) {
-  window.localStorage.setItem(storageKey, JSON.stringify(records));
+  window.localStorage.setItem(storageKey, JSON.stringify(normalizeRecords(records)));
 }
 
 function isRateKind(value: unknown): value is RateKind {
@@ -499,14 +537,16 @@ function loadStringList(key: string): string[] {
       return [];
     }
 
-    return normalizeStringList(JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    return key === favoriteMachineKey ? normalizeMachineList(parsed) : normalizeStringList(parsed);
   } catch {
     return [];
   }
 }
 
 function saveStringList(key: string, values: string[]) {
-  window.localStorage.setItem(key, JSON.stringify(values));
+  const nextValues = key === favoriteMachineKey ? normalizeMachineList(values) : normalizeStringList(values);
+  window.localStorage.setItem(key, JSON.stringify(nextValues));
 }
 
 function normalizeStringList(values: unknown): string[] {
@@ -546,10 +586,10 @@ function normalizeRateOptions(values: unknown): RateOption[] {
 
 function normalizeAppState(state: Partial<AppState> | undefined): AppState {
   return {
-    records: Array.isArray(state?.records) ? state.records : [],
+    records: normalizeRecords(state?.records),
     rateOptions: normalizeRateOptions(state?.rateOptions),
     favoriteStores: normalizeStringList(state?.favoriteStores),
-    favoriteMachines: normalizeStringList(state?.favoriteMachines),
+    favoriteMachines: normalizeMachineList(state?.favoriteMachines),
   };
 }
 
@@ -621,7 +661,7 @@ function createFormFromRecord(record: PlayRecord): RecordForm {
     startTime: record.startTime,
     endTime: record.endTime,
     storeName: record.storeName,
-    machineName: record.machineName,
+    machineName: normalizeMachineName(record.machineName),
     rateId: record.rateId ?? "",
     rateName: record.rateName ?? "",
     investment: String(record.investment || ""),
@@ -1248,7 +1288,7 @@ function parseRecordsFromCsv(text: string) {
   rows.slice(1).forEach((row) => {
     const date = normalizeDateValue(rowValue(row, headerIndex, ["日付", "date"]));
     const storeName = rowValue(row, headerIndex, ["店舗", "storeName"]);
-    const machineName = rowValue(row, headerIndex, ["機種", "machineName"]);
+    const machineName = normalizeMachineName(rowValue(row, headerIndex, ["機種", "machineName"]));
 
     if (!date || !storeName || !machineName) {
       skippedCount += 1;
@@ -1349,21 +1389,26 @@ export function App() {
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
 
   function currentAppState(): AppState {
-    return {
+    return normalizeAppState({
       records,
       rateOptions,
       favoriteStores,
       favoriteMachines,
-    };
+    });
   }
 
   function applyAppState(state: AppState) {
-    setRecords(state.records);
-    setRateOptions(state.rateOptions);
-    setFavoriteStores(state.favoriteStores);
-    setFavoriteMachines(state.favoriteMachines);
-    saveAppStateToLocal(state);
+    const nextState = normalizeAppState(state);
+    setRecords(nextState.records);
+    setRateOptions(nextState.rateOptions);
+    setFavoriteStores(nextState.favoriteStores);
+    setFavoriteMachines(nextState.favoriteMachines);
+    saveAppStateToLocal(nextState);
   }
+
+  useEffect(() => {
+    saveAppStateToLocal(currentAppState());
+  }, []);
 
   async function loadFromCloud() {
     setIsCloudBusy(true);
@@ -2204,7 +2249,7 @@ export function App() {
     if (selectorField === "storeName") {
       setForm((current) => applyStoreToForm(current, value));
     } else {
-      updateForm(selectorField, value);
+      updateForm(selectorField, normalizeMachineName(value));
     }
     closeOptionSelector();
   }
@@ -2431,7 +2476,7 @@ export function App() {
 
   function saveCurrentRecord(openNext: boolean) {
     const storeName = form.storeName.trim();
-    const machineName = form.machineName.trim();
+    const machineName = normalizeMachineName(form.machineName);
 
     if (!storeName || !machineName || (!selectedRate && !editingRecord)) {
       return;

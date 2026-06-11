@@ -65,6 +65,7 @@ Implemented draft behavior:
 - Upload existing browser-local data to the cloud on first load when the cloud data is empty.
 - Show cloud storage status and manual cloud load/save controls in the Other tab.
 - Fill the play entry form with the previous store and rate by default, and switch to the last used rate for a store when that store is selected.
+- Normalize Funky Juggler 2 machine names so Funky Juggler 2KT and full-width variants are saved and shown as Funky Juggler 2.
 
 ## Main Layout
 
@@ -162,5 +163,7 @@ Address, opening hours, parking, entrance rules, installed machine lists from ex
 `precord_data.csv` is a local export and should not be committed to the public repository.
 
 CSV import replaces existing records for any date included in the CSV, while leaving dates not included in the CSV unchanged. pRecord CSV rows are imported when date, store, and machine are present. When pRecord has a saved-ball difference and profit value, the app estimates a rate value from those numbers and stores cash investment/recovery as 0 while filling saved-ball investment/recovery from pRecord investment/recovery.
+
+Machine names are normalized during local load, cloud load, manual entry save, and CSV import. Funky Juggler 2KT and the full-width variants are treated as Funky Juggler 2 so machine summaries and charts do not split the same model.
 
 The app now uses Cloudflare D1 as the shared cloud store and keeps browser-local storage as a fallback copy. The current personal-use setup does not use an app-level login or passcode, so anyone with access to the frontend and Worker endpoint can read or overwrite the shared data.
