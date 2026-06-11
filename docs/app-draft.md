@@ -10,6 +10,7 @@ Implemented draft behavior:
 - Start with today selected.
 - Open the income entry form from the edit button in the calendar month navigation row.
 - Save multiple play records for one day.
+- Save a play record and immediately continue to the next entry, with the next start time set to the previous end time.
 - Store records in the browser for now.
 - Use store names and machine names from the existing halldata data as selectable options.
 - Show a simple update information page inside the app.

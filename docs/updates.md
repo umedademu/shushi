@@ -1,5 +1,10 @@
 # Updates
 
+## 2026-06-11
+
+- Added a save-and-next action to the play entry form.
+- The next play entry starts with its start time set to the previous record's end time.
+
 ## 2026-06-09
 
 - Added automatic defaults for the previous store and rate when opening the play entry form.

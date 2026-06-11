@@ -1469,6 +1469,12 @@ h3 {
   gap: 12px;
 }
 
+.editor-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .save-button {
   width: 100%;
   min-height: 48px;
@@ -1477,6 +1483,11 @@ h3 {
   color: #ffffff;
   font-size: 16px;
   font-weight: 900;
+}
+
+.save-next-button {
+  background: #315f8f;
+  font-size: 15px;
 }
 
 .save-button:disabled {

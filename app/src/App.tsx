@@ -154,6 +154,11 @@ const cloudApiBaseUrl = (
 
 const updateItems = [
   {
+    date: "2026-06-11",
+    title: "保存して次へを追加",
+    body: "収支入力で保存後すぐに次の入力へ進めるようにし、次の開始時刻には直前の終了時刻を入れるようにしました。",
+  },
+  {
     date: "2026-06-09",
     title: "前回の店舗とレートを初期入力に反映",
     body: "収支入力を開いた時に前回使った店舗とレートを入れ、店舗を選ぶとその店舗で前回使ったレートを自動で選ぶようにしました。",
@@ -2424,8 +2429,7 @@ export function App() {
     });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function saveCurrentRecord(openNext: boolean) {
     const storeName = form.storeName.trim();
     const machineName = form.machineName.trim();
 
@@ -2475,7 +2479,35 @@ export function App() {
     setSelectedDate(nextRecord.date);
     const [year, month] = nextRecord.date.split("-").map(Number);
     setCurrentMonth(new Date(year, month - 1, 1));
+    if (openNext && !editingRecord) {
+      setEditingRecordId(null);
+      setSelectorField(null);
+      setSelectorQuery("");
+      setIsRateSelectorOpen(false);
+      setIsRateEditorOpen(false);
+      setEditingRateId(null);
+      setRateEditorStoreName(null);
+      setForm({
+        ...createFormWithPreviousValues(nextRecord.date, false, nextRecord.storeName),
+        startTime: nextRecord.endTime || currentTimeKey(),
+        storeName: nextRecord.storeName,
+        rateId: nextRecord.rateId ?? "",
+        rateName: nextRecord.rateName ?? "",
+      });
+      setIsEditorOpen(true);
+      return;
+    }
+
     closeEditor();
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    saveCurrentRecord(false);
+  }
+
+  function handleSaveAndNext() {
+    saveCurrentRecord(true);
   }
 
   function handleBulkSubmit(event: FormEvent<HTMLFormElement>) {
@@ -4082,9 +4114,25 @@ export function App() {
                 )}
               </div>
 
-              <button className="save-button" type="submit" disabled={!canSave}>
-                {editingRecord ? "更新" : "保存"}
-              </button>
+              {editingRecord ? (
+                <button className="save-button" type="submit" disabled={!canSave}>
+                  更新
+                </button>
+              ) : (
+                <div className="editor-actions">
+                  <button className="save-button" type="submit" disabled={!canSave}>
+                    保存
+                  </button>
+                  <button
+                    className="save-button save-next-button"
+                    type="button"
+                    disabled={!canSave}
+                    onClick={handleSaveAndNext}
+                  >
+                    保存して次へ
+                  </button>
+                </div>
+              )}
             </form>
 
             {selectorField && (
