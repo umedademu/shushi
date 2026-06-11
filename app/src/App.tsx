@@ -95,6 +95,8 @@ type ViewMode = "home" | "analysis" | "stores" | "machines" | "other" | "updates
 type OptionField = "storeName" | "machineName";
 type ChartMode = "month" | "year" | "life" | "store" | "machine";
 type StoreTab = "favorite" | "registered" | "custom";
+type MachineSortKey = "name" | "count" | "lastDate" | "profit" | "expectedValue";
+type SortDirection = "asc" | "desc";
 
 type ChartPoint = {
   key: string;
@@ -115,6 +117,15 @@ type StoreMachineSummary = {
   profit: number;
   expectedValue: number;
   lastDate: string;
+};
+
+type MachineInfo = StoreMachineSummary & {
+  totalHours: number;
+};
+
+type MachineSort = {
+  key: MachineSortKey;
+  direction: SortDirection;
 };
 
 type StoreInfo = {
@@ -158,6 +169,11 @@ const cloudApiBaseUrl = (
 ).replace(/\/+$/u, "");
 
 const updateItems = [
+  {
+    date: "2026-06-11",
+    title: "機種情報の並び替えを追加",
+    body: "機種情報で機種名、件数、最終、収支、期待値の昇順・降順を切り替えられるようにし、店舗数を外して稼働時間を表示しました。",
+  },
   {
     date: "2026-06-11",
     title: "ファンキージャグラー2の表記を統一",
@@ -407,6 +423,18 @@ const storeTabs: Array<{ key: StoreTab; label: string }> = [
   { key: "favorite", label: "お気に入り" },
   { key: "registered", label: "登録店舗" },
   { key: "custom", label: "自登録店舗" },
+];
+
+const machineSortOptions: Array<{
+  key: MachineSortKey;
+  label: string;
+  defaultDirection: SortDirection;
+}> = [
+  { key: "name", label: "機種名", defaultDirection: "asc" },
+  { key: "count", label: "件数", defaultDirection: "desc" },
+  { key: "lastDate", label: "最終", defaultDirection: "desc" },
+  { key: "profit", label: "収支", defaultDirection: "desc" },
+  { key: "expectedValue", label: "期待値", defaultDirection: "desc" },
 ];
 
 const chartSvgWidth = 360;
@@ -815,6 +843,10 @@ function recordsExpectedValue(records: PlayRecord[]) {
   return records.reduce((total, record) => total + record.expectedValue, 0);
 }
 
+function recordsHours(records: PlayRecord[]) {
+  return records.reduce((total, record) => total + durationHours(record.startTime, record.endTime), 0);
+}
+
 function chartRecordsForMode(records: PlayRecord[], mode: ChartMode, date: Date) {
   if (mode === "month") {
     const prefix = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-`;
@@ -887,6 +919,22 @@ function groupChart(records: PlayRecord[], field: "storeName" | "machineName"): 
     .map(([label, groupedRecords]) => chartPoint(label, label, groupedRecords))
     .sort((left, right) => Math.abs(right.value) - Math.abs(left.value))
     .slice(0, 12);
+}
+
+function compareMachineInfo(left: MachineInfo, right: MachineInfo, key: MachineSortKey) {
+  if (key === "name") {
+    return left.name.localeCompare(right.name, "ja");
+  }
+  if (key === "count") {
+    return left.count - right.count;
+  }
+  if (key === "lastDate") {
+    return left.lastDate.localeCompare(right.lastDate);
+  }
+  if (key === "profit") {
+    return left.profit - right.profit;
+  }
+  return left.expectedValue - right.expectedValue;
 }
 
 function chartPointPath(points: Array<ChartPlotPoint & { x: number; y: number }>) {
@@ -1359,6 +1407,10 @@ export function App() {
   const [form, setForm] = useState<RecordForm>(() => createForm(todayKey(), true));
   const [viewMode, setViewMode] = useState<ViewMode>("home");
   const [chartMode, setChartMode] = useState<ChartMode>("month");
+  const [machineSort, setMachineSort] = useState<MachineSort>({
+    key: "lastDate",
+    direction: "desc",
+  });
   const [selectorField, setSelectorField] = useState<OptionField | null>(null);
   const [selectorQuery, setSelectorQuery] = useState("");
   const [favoriteStores, setFavoriteStores] = useState<string[]>(() => loadStringList(favoriteStoreKey));
@@ -1912,7 +1964,7 @@ export function App() {
     () => storeInfoList.find((store) => store.name === selectedStoreInfoName) ?? null,
     [selectedStoreInfoName, storeInfoList],
   );
-  const machineInfoList = useMemo(() => {
+  const machineInfoList = useMemo<MachineInfo[]>(() => {
     const grouped = new Map<string, PlayRecord[]>();
     records.forEach((record) => {
       if (!record.machineName) {
@@ -1922,7 +1974,7 @@ export function App() {
     });
 
     return Array.from(grouped.entries())
-      .map(([machineName, machineRecords]) => ({
+      .map<MachineInfo>(([machineName, machineRecords]) => ({
         count: machineRecords.length,
         expectedValue: recordsExpectedValue(machineRecords),
         lastDate: machineRecords
@@ -1930,10 +1982,15 @@ export function App() {
           .sort((left, right) => right.localeCompare(left))[0],
         name: machineName,
         profit: recordsProfit(machineRecords),
-        storeCount: new Set(machineRecords.map((record) => record.storeName)).size,
+        totalHours: recordsHours(machineRecords),
       }))
-      .sort((left, right) => right.lastDate.localeCompare(left.lastDate) || right.count - left.count);
-  }, [records]);
+      .sort((left, right) => {
+        const compared = compareMachineInfo(left, right, machineSort.key);
+        const ordered = machineSort.direction === "asc" ? compared : -compared;
+
+        return ordered || left.name.localeCompare(right.name, "ja");
+      });
+  }, [machineSort, records]);
   const storeSavedTotals = useMemo(() => {
     const activeRates = rateOptions.filter((rate) => rate.savedCount !== 0);
     return {
@@ -2200,6 +2257,23 @@ export function App() {
       setStoreMessage("");
     }
     setViewMode(nextMode);
+  }
+
+  function changeMachineSort(nextKey: MachineSortKey) {
+    setMachineSort((current) => {
+      if (current.key === nextKey) {
+        return {
+          key: nextKey,
+          direction: current.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      const option = machineSortOptions.find((item) => item.key === nextKey);
+      return {
+        key: nextKey,
+        direction: option?.defaultDirection ?? "desc",
+      };
+    });
   }
 
   function selectStoreInfo(storeName: string) {
@@ -3703,6 +3777,26 @@ export function App() {
             </div>
           </header>
 
+          <div className="machine-sort-panel" aria-label="機種情報の並び替え">
+            {machineSortOptions.map((option) => {
+              const isActive = machineSort.key === option.key;
+              const directionLabel = machineSort.direction === "asc" ? "昇順" : "降順";
+
+              return (
+                <button
+                  className={`machine-sort-button ${isActive ? "is-active" : ""}`}
+                  key={option.key}
+                  type="button"
+                  onClick={() => changeMachineSort(option.key)}
+                  aria-label={`${option.label}順${isActive ? ` ${directionLabel}` : ""}`}
+                >
+                  <span>{option.label}</span>
+                  {isActive && <strong>{machineSort.direction === "asc" ? "↑" : "↓"}</strong>}
+                </button>
+              );
+            })}
+          </div>
+
           <div className="store-machine-list">
             {machineInfoList.length === 0 ? (
               <div className="empty-state">
@@ -3710,21 +3804,36 @@ export function App() {
               </div>
             ) : (
               machineInfoList.map((machine) => (
-                <article className="store-machine-row" key={machine.name}>
-                  <div>
+                <article className="machine-info-card" key={machine.name}>
+                  <header className="machine-info-head">
                     <strong>{machine.name}</strong>
-                    <span>
-                      {machine.count}件 / {machine.storeCount}店舗 / 最終 {machine.lastDate}
-                    </span>
-                  </div>
-                  <div>
-                    <strong className={classForAmount(machine.profit)}>
-                      {signedCurrency(machine.profit)}
-                    </strong>
-                    <span className={classForAmount(machine.expectedValue)}>
-                      期待値 {signedCurrency(machine.expectedValue)}
-                    </span>
-                  </div>
+                  </header>
+                  <dl className="machine-info-grid">
+                    <div>
+                      <dt>件数</dt>
+                      <dd>{machine.count}件</dd>
+                    </div>
+                    <div>
+                      <dt>時間</dt>
+                      <dd>{machine.totalHours.toFixed(1)}時間</dd>
+                    </div>
+                    <div>
+                      <dt>最終</dt>
+                      <dd>{machine.lastDate}</dd>
+                    </div>
+                    <div>
+                      <dt>収支</dt>
+                      <dd className={classForAmount(machine.profit)}>
+                        {signedCurrency(machine.profit)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>期待値</dt>
+                      <dd className={classForAmount(machine.expectedValue)}>
+                        {signedCurrency(machine.expectedValue)}
+                      </dd>
+                    </div>
+                  </dl>
                 </article>
               ))
             )}

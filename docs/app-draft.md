@@ -57,6 +57,7 @@ Implemented draft behavior:
 - Open a store detail view to edit rate settings, directly update saved-ball counts, start a new play entry for that store, review past records, and review machines played at that store.
 - Place rate addition buttons inside the store detail rate and saved-ball section, with labels that clearly say they add pachinko or slot rates.
 - Use bottom tabs for the main app areas: monthly calendar, profit analysis, store information, machine information, and other data operations.
+- Show machine information with sortable machine name, record count, latest play date, profit, and expected value controls, and include total play hours for each machine.
 - Keep the main tabs compact by omitting large top headings and placing the profit entry button in the calendar month navigation row.
 - Add actual profit bars on top of the monthly, yearly, and lifetime chart views, while keeping cumulative profit and expected value as lines.
 - Show pRecord-style chart helpers: right-side yen scale labels, guide lines, a simple graph legend, and a performance summary for the current chart range.

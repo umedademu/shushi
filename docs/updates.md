@@ -2,6 +2,7 @@
 
 ## 2026-06-11
 
+- Added sort controls to the machine information view for machine name, record count, latest play date, profit, and expected value, with ascending and descending order. Removed store count and added total play hours.
 - Unified Funky Juggler 2 machine naming so Funky Juggler 2KT and full-width variants are treated as Funky Juggler 2, including saved records and CSV imports.
 - Added a save-and-next action to the play entry form.
 - The next play entry starts with its start time set to the previous record's end time.

@@ -995,6 +995,86 @@ h3 {
   margin-top: 10px;
 }
 
+.machine-sort-panel {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+  margin-top: 10px;
+}
+
+.machine-sort-button {
+  align-items: center;
+  border: 1px solid #dce5e1;
+  border-radius: 8px;
+  background: #fbfcfb;
+  color: #31423d;
+  display: flex;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 4px;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 8px;
+}
+
+.machine-sort-button.is-active {
+  border-color: #168c61;
+  background: #e7f7ef;
+  color: #0c6c49;
+}
+
+.machine-sort-button strong {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.machine-sort-panel + .store-machine-list {
+  margin-top: 10px;
+}
+
+.machine-info-card {
+  border: 1px solid #dfe8e4;
+  border-radius: 8px;
+  background: #fbfcfb;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.machine-info-head strong {
+  color: #14241f;
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.machine-info-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.machine-info-grid div {
+  border-radius: 8px;
+  background: #ffffff;
+  min-width: 0;
+  padding: 8px;
+}
+
+.machine-info-grid dt {
+  color: #72807c;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.machine-info-grid dd {
+  color: #1b2925;
+  font-size: 13px;
+  font-weight: 900;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
 .store-card {
   position: relative;
   overflow: hidden;
@@ -1989,6 +2069,10 @@ h3 {
 
   .store-rate-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .machine-info-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
