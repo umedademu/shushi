@@ -170,6 +170,11 @@ const cloudApiBaseUrl = (
 
 const updateItems = [
   {
+    date: "2026-06-21",
+    title: "カレンダー上部に合計期待値を追加",
+    body: "カレンダー上部の月合計に、合計収支と並べてその月の合計期待値も表示するようにしました。",
+  },
+  {
     date: "2026-06-11",
     title: "機種情報の並び替えを追加",
     body: "機種情報で機種名、件数、最終、収支、期待値の昇順・降順を切り替えられるようにし、店舗数を外して稼働時間を表示しました。",
@@ -1596,6 +1601,7 @@ export function App() {
   );
   const selectedSavedUnitKind = recordsSavedUnitKind(selectedRecords);
   const monthProfit = monthRecords.reduce((total, record) => total + profit(record), 0);
+  const monthExpected = recordsExpectedValue(monthRecords);
   const chartData = useMemo(() => {
     const year = currentMonth.getFullYear();
     const isTrend = chartMode === "month" || chartMode === "year" || chartMode === "life";
@@ -3383,9 +3389,16 @@ export function App() {
               </button>
               <div className="month-heading">
                 <p className="month-label">{monthLabel(currentMonth)}</p>
-                <p className={`month-total ${classForAmount(monthProfit)}`}>
-                  {signedCurrency(monthProfit)}
-                </p>
+                <div className="month-total-row">
+                  <p className={`month-total ${classForAmount(monthProfit)}`}>
+                    <span>収支</span>
+                    {signedCurrency(monthProfit)}
+                  </p>
+                  <p className={`month-total ${classForAmount(monthExpected)}`}>
+                    <span>期待値</span>
+                    {signedCurrency(monthExpected)}
+                  </p>
+                </div>
               </div>
               <div className="month-actions">
                 <button className="icon-button month-nav-button" type="button" onClick={() => moveMonth(1)} title="次の月">

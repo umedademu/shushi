@@ -1,5 +1,9 @@
 # Updates
 
+## 2026-06-21
+
+- Added the monthly expected value total beside the monthly profit total at the top of the calendar.
+
 ## 2026-06-11
 
 - Added sort controls to the machine information view for machine name, record count, latest play date, profit, and expected value, with ascending and descending order. Removed store count and added total play hours.
