@@ -1,5 +1,10 @@
 # Updates
 
+## 2026-07-16
+
+- Added a second daily calendar line for expected value below the actual profit.
+- Added `￥` before actual profit and `☆` before expected value in each calendar day so the two amounts are easier to tell apart.
+
 ## 2026-06-21
 
 - Added the monthly expected value total beside the monthly profit total at the top of the calendar.

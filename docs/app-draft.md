@@ -46,6 +46,8 @@ Implemented draft behavior:
 - Remove the duplicated selected-day add card and tighten the desktop layout.
 - Show the desktop view as a wider single column.
 - Show daily calendar profit in plain yen units with comma separators instead of k units.
+- Show each calendar day with actual profit on the first amount line and expected value on the second amount line.
+- Prefix calendar actual profit with `￥` and calendar expected value with `☆` so the two daily amounts can be distinguished quickly.
 - Show selected-day details in the order: summary, play record cards, then profit chart.
 - Show positive profit and positive saved-ball changes in blue, while keeping selected calendar day values readable.
 - Move the monthly chart to the previous or next month with buttons that stay linked to the main calendar month.

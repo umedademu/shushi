@@ -170,6 +170,11 @@ const cloudApiBaseUrl = (
 
 const updateItems = [
   {
+    date: "2026-07-16",
+    title: "カレンダーの日別期待値を追加",
+    body: "カレンダーの日付ごとに、実収支の下へ期待値も表示するようにしました。実収支は￥、期待値は☆を先頭に付けて区別しやすくしました。",
+  },
+  {
     date: "2026-06-21",
     title: "カレンダー上部に合計期待値を追加",
     body: "カレンダー上部の月合計に、合計収支と並べてその月の合計期待値も表示するようにしました。",
@@ -3430,22 +3435,34 @@ export function App() {
 
                 const dayRecords = records.filter((record) => record.date === dateKey);
                 const dayProfit = dayRecords.reduce((total, record) => total + profit(record), 0);
+                const dayExpected = recordsExpectedValue(dayRecords);
                 const isSelected = dateKey === selectedDate;
                 const isToday = dateKey === todayKey();
                 const dayNumber = Number(dateKey.split("-")[2]);
 
                 return (
                   <button
-                    className={`day-cell ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
+                    className={`day-cell ${dayRecords.length > 0 ? "has-records" : ""} ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
                     key={dateKey}
                     type="button"
                     onClick={() => setSelectedDate(dateKey)}
                   >
-                    <span>{dayNumber}</span>
+                    <span className="day-number">{dayNumber}</span>
                     {dayRecords.length > 0 && (
-                      <small className={classForAmount(dayProfit)}>
-                        {signedPlainAmount(dayProfit)}
-                      </small>
+                      <div className="day-metrics">
+                        <small
+                          className={classForAmount(dayProfit)}
+                          aria-label={`実収支 ${signedPlainAmount(dayProfit)}`}
+                        >
+                          ￥{signedPlainAmount(dayProfit)}
+                        </small>
+                        <small
+                          className={classForAmount(dayExpected)}
+                          aria-label={`期待値 ${signedPlainAmount(dayExpected)}`}
+                        >
+                          ☆{signedPlainAmount(dayExpected)}
+                        </small>
+                      </div>
                     )}
                   </button>
                 );

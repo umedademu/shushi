@@ -302,11 +302,11 @@ h3 {
   color: #192722;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: 2px;
+  padding: 2px 1px;
 }
 
 .day-cell.empty {
@@ -314,16 +314,23 @@ h3 {
   background: transparent;
 }
 
-.day-cell span {
-  font-size: 14px;
+.day-cell .day-number {
+  font-size: 13px;
   font-weight: 800;
+  line-height: 1;
+}
+
+.day-metrics {
+  display: grid;
+  gap: 1px;
+  width: 100%;
 }
 
 .day-cell small {
   width: 100%;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.05;
   overflow-wrap: anywhere;
   text-align: center;
 }
@@ -2070,8 +2077,12 @@ h3 {
     gap: 8px;
   }
 
+  .day-cell .day-number {
+    font-size: 14px;
+  }
+
   .day-cell small {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .summary-grid {
@@ -2157,6 +2168,10 @@ h3 {
     font-size: 17px;
   }
 
+  .calendar-grid {
+    gap: 4px;
+  }
+
   .summary-grid {
     grid-template-columns: 1fr;
   }
@@ -2182,6 +2197,23 @@ h3 {
 }
 
 @media (max-width: 360px) {
+  .month-panel {
+    padding: 12px 10px;
+  }
+
+  .calendar-grid {
+    gap: 3px;
+  }
+
+  .day-cell .day-number {
+    font-size: 12px;
+  }
+
+  .day-cell small {
+    font-size: 7px;
+    line-height: 1;
+  }
+
   .chart-score-head {
     align-items: flex-start;
     flex-direction: column;
