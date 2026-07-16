@@ -1,5 +1,10 @@
 # Updates
 
+## 2026-07-17
+
+- Made the monthly profit and expected value totals tappable selectors for the daily calendar amounts.
+- Changed each calendar day to show only the selected amount and removed the `￥` and `☆` prefixes.
+
 ## 2026-07-16
 
 - Added a second daily calendar line for expected value below the actual profit.

@@ -94,6 +94,7 @@ type RateSnapshot = Pick<
 type ViewMode = "home" | "analysis" | "stores" | "machines" | "other" | "updates";
 type OptionField = "storeName" | "machineName";
 type ChartMode = "month" | "year" | "life" | "store" | "machine";
+type CalendarAmountMode = "profit" | "expected";
 type StoreTab = "favorite" | "registered" | "custom";
 type MachineSortKey = "name" | "count" | "lastDate" | "profit" | "expectedValue";
 type SortDirection = "asc" | "desc";
@@ -169,6 +170,11 @@ const cloudApiBaseUrl = (
 ).replace(/\/+$/u, "");
 
 const updateItems = [
+  {
+    date: "2026-07-17",
+    title: "カレンダーの日別表示切り替えを追加",
+    body: "カレンダー上部の収支または期待値を押すと、日付ごとの金額表示を切り替えられるようにしました。日別欄は選択中の金額だけを記号なしで表示します。",
+  },
   {
     date: "2026-07-16",
     title: "カレンダーの日別期待値を追加",
@@ -1417,6 +1423,7 @@ export function App() {
   const [form, setForm] = useState<RecordForm>(() => createForm(todayKey(), true));
   const [viewMode, setViewMode] = useState<ViewMode>("home");
   const [chartMode, setChartMode] = useState<ChartMode>("month");
+  const [calendarAmountMode, setCalendarAmountMode] = useState<CalendarAmountMode>("profit");
   const [machineSort, setMachineSort] = useState<MachineSort>({
     key: "lastDate",
     direction: "desc",
@@ -3394,15 +3401,27 @@ export function App() {
               </button>
               <div className="month-heading">
                 <p className="month-label">{monthLabel(currentMonth)}</p>
-                <div className="month-total-row">
-                  <p className={`month-total ${classForAmount(monthProfit)}`}>
+                <div className="month-total-row" role="group" aria-label="日別表示の切り替え">
+                  <button
+                    aria-label="日別表示を収支に切り替える"
+                    aria-pressed={calendarAmountMode === "profit"}
+                    className={`month-total ${classForAmount(monthProfit)} ${calendarAmountMode === "profit" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => setCalendarAmountMode("profit")}
+                  >
                     <span>収支</span>
                     {signedCurrency(monthProfit)}
-                  </p>
-                  <p className={`month-total ${classForAmount(monthExpected)}`}>
+                  </button>
+                  <button
+                    aria-label="日別表示を期待値に切り替える"
+                    aria-pressed={calendarAmountMode === "expected"}
+                    className={`month-total ${classForAmount(monthExpected)} ${calendarAmountMode === "expected" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => setCalendarAmountMode("expected")}
+                  >
                     <span>期待値</span>
                     {signedCurrency(monthExpected)}
-                  </p>
+                  </button>
                 </div>
               </div>
               <div className="month-actions">
@@ -3436,6 +3455,8 @@ export function App() {
                 const dayRecords = records.filter((record) => record.date === dateKey);
                 const dayProfit = dayRecords.reduce((total, record) => total + profit(record), 0);
                 const dayExpected = recordsExpectedValue(dayRecords);
+                const dayAmount = calendarAmountMode === "profit" ? dayProfit : dayExpected;
+                const dayAmountLabel = calendarAmountMode === "profit" ? "実収支" : "期待値";
                 const isSelected = dateKey === selectedDate;
                 const isToday = dateKey === todayKey();
                 const dayNumber = Number(dateKey.split("-")[2]);
@@ -3449,20 +3470,12 @@ export function App() {
                   >
                     <span className="day-number">{dayNumber}</span>
                     {dayRecords.length > 0 && (
-                      <div className="day-metrics">
-                        <small
-                          className={classForAmount(dayProfit)}
-                          aria-label={`実収支 ${signedPlainAmount(dayProfit)}`}
-                        >
-                          ￥{signedPlainAmount(dayProfit)}
-                        </small>
-                        <small
-                          className={classForAmount(dayExpected)}
-                          aria-label={`期待値 ${signedPlainAmount(dayExpected)}`}
-                        >
-                          ☆{signedPlainAmount(dayExpected)}
-                        </small>
-                      </div>
+                      <small
+                        className={`day-amount ${classForAmount(dayAmount)}`}
+                        aria-label={`${dayAmountLabel} ${signedPlainAmount(dayAmount)}`}
+                      >
+                        {signedPlainAmount(dayAmount)}
+                      </small>
                     )}
                   </button>
                 );
