@@ -2,6 +2,7 @@
 
 ## 2026-07-17
 
+- Unified spacing and number variants of Smart Slot Fist of the North Star Tensei Chapter 2 so existing records are grouped as one machine.
 - Added hourly profit and expected hourly profit to each store and machine information card.
 - Added the same hourly figures to the store detail summary.
 - Made the monthly profit and expected value totals tappable selectors for the daily calendar amounts.
