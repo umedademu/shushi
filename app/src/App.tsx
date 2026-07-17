@@ -122,6 +122,8 @@ type StoreMachineSummary = {
 
 type MachineInfo = StoreMachineSummary & {
   totalHours: number;
+  hourlyProfit: number;
+  expectedHourlyProfit: number;
 };
 
 type MachineSort = {
@@ -139,6 +141,8 @@ type StoreInfo = {
   totalProfit: number;
   totalExpectedValue: number;
   totalHours: number;
+  hourlyProfit: number;
+  expectedHourlyProfit: number;
   lastDate: string;
   savedText: string;
   machines: StoreMachineSummary[];
@@ -170,6 +174,11 @@ const cloudApiBaseUrl = (
 ).replace(/\/+$/u, "");
 
 const updateItems = [
+  {
+    date: "2026-07-17",
+    title: "店舗情報と機種情報に時給を追加",
+    body: "店舗情報と機種情報で、各店舗・各機種の累計収支から求めた時給と、累計期待値から求めた期待時給を確認できるようにしました。",
+  },
   {
     date: "2026-07-17",
     title: "カレンダーの日別表示切り替えを追加",
@@ -861,6 +870,10 @@ function recordsExpectedValue(records: PlayRecord[]) {
 
 function recordsHours(records: PlayRecord[]) {
   return records.reduce((total, record) => total + durationHours(record.startTime, record.endTime), 0);
+}
+
+function hourlyAmount(amount: number, hours: number) {
+  return hours > 0 ? Math.round(amount / hours) : 0;
 }
 
 function chartRecordsForMode(records: PlayRecord[], mode: ChartMode, date: Date) {
@@ -1914,6 +1927,9 @@ export function App() {
         visibleSavedRates.length > 0
           ? visibleSavedRates.map((rate) => storeSavedSummaryText(rate)).join(" / ")
           : "貯玉なし";
+      const totalProfit = recordsProfit(storeRecords);
+      const totalExpectedValue = recordsExpectedValue(storeRecords);
+      const totalHours = recordsHours(storeRecords);
       const machineGroups = new Map<string, PlayRecord[]>();
       storeRecords.forEach((record) => {
         if (!record.machineName) {
@@ -1940,12 +1956,11 @@ export function App() {
         records: storeRecords,
         rates: storeRates,
         monthProfit: recordsProfit(monthStoreRecords),
-        totalProfit: recordsProfit(storeRecords),
-        totalExpectedValue: recordsExpectedValue(storeRecords),
-        totalHours: storeRecords.reduce(
-          (total, record) => total + durationHours(record.startTime, record.endTime),
-          0,
-        ),
+        totalProfit,
+        totalExpectedValue,
+        totalHours,
+        hourlyProfit: hourlyAmount(totalProfit, totalHours),
+        expectedHourlyProfit: hourlyAmount(totalExpectedValue, totalHours),
         lastDate: storeRecords[0]?.date ?? "",
         savedText,
         machines,
@@ -1992,16 +2007,24 @@ export function App() {
     });
 
     return Array.from(grouped.entries())
-      .map<MachineInfo>(([machineName, machineRecords]) => ({
-        count: machineRecords.length,
-        expectedValue: recordsExpectedValue(machineRecords),
-        lastDate: machineRecords
-          .map((record) => record.date)
-          .sort((left, right) => right.localeCompare(left))[0],
-        name: machineName,
-        profit: recordsProfit(machineRecords),
-        totalHours: recordsHours(machineRecords),
-      }))
+      .map<MachineInfo>(([machineName, machineRecords]) => {
+        const machineProfit = recordsProfit(machineRecords);
+        const machineExpectedValue = recordsExpectedValue(machineRecords);
+        const totalHours = recordsHours(machineRecords);
+
+        return {
+          count: machineRecords.length,
+          expectedValue: machineExpectedValue,
+          expectedHourlyProfit: hourlyAmount(machineExpectedValue, totalHours),
+          hourlyProfit: hourlyAmount(machineProfit, totalHours),
+          lastDate: machineRecords
+            .map((record) => record.date)
+            .sort((left, right) => right.localeCompare(left))[0],
+          name: machineName,
+          profit: machineProfit,
+          totalHours,
+        };
+      })
       .sort((left, right) => {
         const compared = compareMachineInfo(left, right, machineSort.key);
         const ordered = machineSort.direction === "asc" ? compared : -compared;
@@ -2929,6 +2952,18 @@ export function App() {
                     </dd>
                   </div>
                   <div>
+                    <dt>時給</dt>
+                    <dd className={classForAmount(selectedStoreInfo.hourlyProfit)}>
+                      {signedCurrency(selectedStoreInfo.hourlyProfit)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>期待時給</dt>
+                    <dd className={classForAmount(selectedStoreInfo.expectedHourlyProfit)}>
+                      {signedCurrency(selectedStoreInfo.expectedHourlyProfit)}
+                    </dd>
+                  </div>
+                  <div>
                     <dt>貯玉</dt>
                     <dd>{selectedStoreInfo.savedText}</dd>
                   </div>
@@ -3215,6 +3250,18 @@ export function App() {
                             <dt>累計期待値</dt>
                             <dd className={classForAmount(store.totalExpectedValue)}>
                               {signedCurrency(store.totalExpectedValue)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>時給</dt>
+                            <dd className={classForAmount(store.hourlyProfit)}>
+                              {signedCurrency(store.hourlyProfit)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>期待時給</dt>
+                            <dd className={classForAmount(store.expectedHourlyProfit)}>
+                              {signedCurrency(store.expectedHourlyProfit)}
                             </dd>
                           </div>
                           <div>
@@ -3861,10 +3908,6 @@ export function App() {
                       <dd>{machine.totalHours.toFixed(1)}時間</dd>
                     </div>
                     <div>
-                      <dt>最終</dt>
-                      <dd>{machine.lastDate}</dd>
-                    </div>
-                    <div>
                       <dt>収支</dt>
                       <dd className={classForAmount(machine.profit)}>
                         {signedCurrency(machine.profit)}
@@ -3875,6 +3918,22 @@ export function App() {
                       <dd className={classForAmount(machine.expectedValue)}>
                         {signedCurrency(machine.expectedValue)}
                       </dd>
+                    </div>
+                    <div>
+                      <dt>時給</dt>
+                      <dd className={classForAmount(machine.hourlyProfit)}>
+                        {signedCurrency(machine.hourlyProfit)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>期待時給</dt>
+                      <dd className={classForAmount(machine.expectedHourlyProfit)}>
+                        {signedCurrency(machine.expectedHourlyProfit)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>最終</dt>
+                      <dd>{machine.lastDate}</dd>
                     </div>
                   </dl>
                 </article>

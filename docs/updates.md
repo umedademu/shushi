@@ -2,6 +2,8 @@
 
 ## 2026-07-17
 
+- Added hourly profit and expected hourly profit to each store and machine information card.
+- Added the same hourly figures to the store detail summary.
 - Made the monthly profit and expected value totals tappable selectors for the daily calendar amounts.
 - Changed each calendar day to show only the selected amount and removed the `￥` and `☆` prefixes.
 
