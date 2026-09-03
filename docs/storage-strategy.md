@@ -32,6 +32,9 @@ Current Cloudflare resources:
 - D1 table: `app_state`
 - Worker name: `shushi-cloud`
 - Worker endpoint: `/state`
+- Kakeibo read-only endpoint: `/saved-total`
+
+The `/saved-total` endpoint returns only the all-store saved-ball total converted to yen. It is reached through a Cloudflare Worker service binding and requires a secret shared only by the two Workers. It is used by the personal kakeibo app's daily process.
 
 The app still keeps a browser-local copy as a fallback. On first load, if cloud data is empty and browser-local data exists, the browser-local data is uploaded to the cloud.
 

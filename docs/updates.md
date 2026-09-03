@@ -1,5 +1,9 @@
 # Updates
 
+## 2026-09-03
+
+- Added a secret-protected read-only endpoint that returns the all-store saved-ball total in yen for the personal kakeibo app.
+
 ## 2026-07-17
 
 - Unified spacing and number variants of Smart Slot Fist of the North Star Tensei Chapter 2 so existing records are grouped as one machine.

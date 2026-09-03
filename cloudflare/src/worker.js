@@ -67,6 +67,26 @@ function normalizeState(value) {
   };
 }
 
+function isKakeiboAuthorized(request, env) {
+  return (
+    Boolean(env.KAKEIBO_READ_SECRET) &&
+    request.headers.get("Authorization") === `Bearer ${env.KAKEIBO_READ_SECRET}`
+  );
+}
+
+function savedBallTotalInYen(state) {
+  const rates = normalizeArray(state?.rateOptions);
+  const total = rates.reduce((sum, rate) => {
+    const savedCount = Number(rate?.savedCount) || 0;
+    const exchangeCount = Number(rate?.exchangeCountPer100Yen) || 0;
+    const unitPrice = Number(rate?.unitPrice) || 0;
+    const valuePerUnit = exchangeCount > 0 ? 100 / exchangeCount : unitPrice;
+    return sum + savedCount * valuePerUnit;
+  }, 0);
+
+  return Math.max(0, Math.round(total));
+}
+
 async function ensureSchema(env) {
   await env.DB.prepare(
     "create table if not exists app_state (owner_key text primary key, state_json text not null, updated_at text not null)",
@@ -130,6 +150,19 @@ export default {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
+    }
+
+    if (url.pathname === "/saved-total") {
+      if (request.method !== "GET") {
+        return json({ error: "method_not_allowed" }, { status: 405 });
+      }
+
+      if (!isKakeiboAuthorized(request, env)) {
+        return json({ error: "unauthorized" }, { status: 401 });
+      }
+
+      const { state, updatedAt } = await readState(env);
+      return json({ amount: savedBallTotalInYen(state), sourceUpdatedAt: updatedAt });
     }
 
     if (url.pathname !== "/state") {
