@@ -95,7 +95,7 @@ type ViewMode = "home" | "analysis" | "stores" | "machines" | "other" | "updates
 type OptionField = "storeName" | "machineName";
 type ChartMode = "month" | "year" | "life" | "store" | "machine";
 type CalendarAmountMode = "profit" | "expected";
-type StoreTab = "favorite" | "registered" | "custom";
+type StoreTab = "favorite" | "registered" | "custom" | "saved";
 type MachineSortKey = "name" | "count" | "lastDate" | "profit" | "expectedValue";
 type SortDirection = "asc" | "desc";
 
@@ -177,6 +177,11 @@ const cloudApiBaseUrl = (
 ).replace(/\/+$/u, "");
 
 const updateItems = [
+  {
+    date: "2026-09-04",
+    title: "貯玉がある店舗の絞り込みを追加",
+    body: "店舗情報に「貯玉あり店舗」を追加し、貯玉が1玉・1枚以上ある店舗だけを一覧で確認できるようにしました。",
+  },
   {
     date: "2026-09-03",
     title: "家計簿への貯玉連携を追加",
@@ -461,6 +466,7 @@ const storeTabs: Array<{ key: StoreTab; label: string }> = [
   { key: "favorite", label: "お気に入り" },
   { key: "registered", label: "登録店舗" },
   { key: "custom", label: "自登録店舗" },
+  { key: "saved", label: "貯玉あり店舗" },
 ];
 
 const machineSortOptions: Array<{
@@ -1989,6 +1995,9 @@ export function App() {
       if (storeTab === "registered") {
         return store.isRegistered;
       }
+      if (storeTab === "saved") {
+        return store.rates.some((rate) => rate.savedCount > 0);
+      }
       return !store.isRegistered;
     });
     const byQuery = query
@@ -2920,6 +2929,9 @@ export function App() {
       favorite: storeInfoList.filter((store) => store.isFavorite).length,
       registered: storeInfoList.filter((store) => store.isRegistered).length,
       custom: storeInfoList.filter((store) => !store.isRegistered).length,
+      saved: storeInfoList.filter((store) =>
+        store.rates.some((rate) => rate.savedCount > 0),
+      ).length,
     };
 
     return (

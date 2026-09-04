@@ -1,5 +1,9 @@
 # Updates
 
+## 2026-09-04
+
+- Added a fourth store information tab that lists only stores with a saved-ball count greater than zero.
+
 ## 2026-09-03
 
 - Added a secret-protected read-only endpoint that returns the all-store saved-ball total in yen for the personal kakeibo app.
