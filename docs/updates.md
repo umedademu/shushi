@@ -1,5 +1,9 @@
 # Updates
 
+## 2026-09-16
+
+- 店舗情報のすべての一覧を、店舗ごとの貯玉の円換算合計が多い順に変更しました。同額の場合は従来どおり記録・レート・お気に入りの有無、店舗名の順で並べます。
+
 ## 2026-09-04
 
 - Added a fourth store information tab that lists only stores with a saved-ball count greater than zero.

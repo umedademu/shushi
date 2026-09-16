@@ -145,6 +145,7 @@ type StoreInfo = {
   expectedHourlyProfit: number;
   lastDate: string;
   savedText: string;
+  savedValue: number;
   machines: StoreMachineSummary[];
 };
 
@@ -177,6 +178,11 @@ const cloudApiBaseUrl = (
 ).replace(/\/+$/u, "");
 
 const updateItems = [
+  {
+    date: "2026-09-16",
+    title: "店舗一覧を貯玉が多い順に変更",
+    body: "店舗情報の各一覧で、店舗ごとの貯玉を円換算した合計が多い順に表示するようにしました。",
+  },
   {
     date: "2026-09-04",
     title: "貯玉がある店舗の絞り込みを追加",
@@ -1981,6 +1987,9 @@ export function App() {
         hourlyProfit: hourlyAmount(totalProfit, totalHours),
         expectedHourlyProfit: hourlyAmount(totalExpectedValue, totalHours),
         lastDate: storeRecords[0]?.date ?? "",
+        savedValue: Math.round(
+          storeRates.reduce((total, rate) => total + rate.savedCount * rateUnitValue(rate), 0),
+        ),
         savedText,
         machines,
       };
@@ -2005,6 +2014,10 @@ export function App() {
       : byTab;
 
     return byQuery.sort((left, right) => {
+      if (left.savedValue !== right.savedValue) {
+        return right.savedValue - left.savedValue;
+      }
+
       const leftHasData = left.records.length > 0 || left.rates.length > 0 || left.isFavorite;
       const rightHasData = right.records.length > 0 || right.rates.length > 0 || right.isFavorite;
 

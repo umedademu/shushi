@@ -55,6 +55,7 @@ Implemented draft behavior:
 - Show rate details such as exchange rate, saved balls, and replay fee when choosing a rate in bulk editing.
 - Add a store information view with favorite, registered, and self-registered store tabs.
 - Show each store's saved-ball summary with yen conversion, monthly profit, total profit, record count, play hours, and last play date.
+- 店舗情報の各一覧は、全レートの貯玉を円換算した店舗ごとの合計が多い順に表示する。同額の場合は記録・レート・お気に入りがある店舗を優先し、さらに店舗名順で並べる。検索時もこの並び順を維持する。
 - Show a saved-ball total across all stores on the store list, including yen conversion, pachinko count, and slot count.
 - Open a store detail view to edit rate settings, directly update saved-ball counts, start a new play entry for that store, review past records, and review machines played at that store.
 - Place rate addition buttons inside the store detail rate and saved-ball section, with labels that clearly say they add pachinko or slot rates.
