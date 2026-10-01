@@ -7,6 +7,7 @@ The first draft focuses on mobile use, while still keeping the layout usable on 
 Implemented draft behavior:
 
 - Show a monthly calendar.
+- カレンダー上部に、表示中の月の収支・期待値・稼働日数を表示する。稼働日数は記録がある日付の数とし、同日の複数記録は1日、収支や期待値が0円の記録も1日として数える。記録のない月は0日と表示し、月移動や記録の追加・編集・削除に合わせて更新する。
 - Start with today selected.
 - Open the income entry form from the edit button in the calendar month navigation row.
 - Save multiple play records for one day.

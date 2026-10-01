@@ -179,6 +179,11 @@ const cloudApiBaseUrl = (
 
 const updateItems = [
   {
+    date: "2026-10-01",
+    title: "カレンダー上部に稼働日数を追加",
+    body: "カレンダー上部の収支・期待値と並べて、その月の稼働日数を表示するようにしました。同じ日に複数の記録がある場合も1日として数えます。",
+  },
+  {
     date: "2026-09-16",
     title: "店舗一覧を貯玉が多い順に変更",
     body: "店舗情報の各一覧で、店舗ごとの貯玉を円換算した合計が多い順に表示するようにしました。",
@@ -1652,6 +1657,7 @@ export function App() {
   const selectedSavedUnitKind = recordsSavedUnitKind(selectedRecords);
   const monthProfit = monthRecords.reduce((total, record) => total + profit(record), 0);
   const monthExpected = recordsExpectedValue(monthRecords);
+  const monthPlayDays = new Set(monthRecords.map((record) => record.date)).size;
   const chartData = useMemo(() => {
     const year = currentMonth.getFullYear();
     const isTrend = chartMode === "month" || chartMode === "year" || chartMode === "life";
@@ -3486,7 +3492,7 @@ export function App() {
               </button>
               <div className="month-heading">
                 <p className="month-label">{monthLabel(currentMonth)}</p>
-                <div className="month-total-row" role="group" aria-label="日別表示の切り替え">
+                <div className="month-total-row" role="group" aria-label="月の集計">
                   <button
                     aria-label="日別表示を収支に切り替える"
                     aria-pressed={calendarAmountMode === "profit"}
@@ -3507,6 +3513,10 @@ export function App() {
                     <span>期待値</span>
                     {signedCurrency(monthExpected)}
                   </button>
+                  <p className="month-play-days">
+                    <span>稼働日数</span>
+                    {monthPlayDays}日
+                  </p>
                 </div>
               </div>
               <div className="month-actions">

@@ -252,20 +252,29 @@ h3 {
   text-align: center;
 }
 
-.month-total {
-  appearance: none;
+.month-total,
+.month-play-days {
   min-width: 0;
   margin: 0;
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
-  cursor: pointer;
   font-size: 13px;
   font-weight: 800;
   line-height: 1.2;
   padding: 3px 4px 5px;
   text-align: center;
   overflow-wrap: anywhere;
+}
+
+.month-total {
+  appearance: none;
+  cursor: pointer;
+}
+
+.month-play-days {
+  color: #15231f;
+  white-space: nowrap;
 }
 
 .month-total.active {
@@ -287,7 +296,8 @@ h3 {
   margin-top: 3px;
 }
 
-.month-total span {
+.month-total span,
+.month-play-days span {
   color: #61706b;
   margin-right: 3px;
 }
