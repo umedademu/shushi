@@ -72,6 +72,7 @@ Implemented draft behavior:
 - Fill the play entry form with the previous store and rate by default, and switch to the last used rate for a store when that store is selected.
 - Normalize Funky Juggler 2 machine names so Funky Juggler 2KT and full-width variants are saved and shown as Funky Juggler 2.
 - Normalize spacing and full-width number variants of Smart Slot Fist of the North Star Tensei Chapter 2 so saved records are grouped as one machine.
+- その他タブの「画面の配色」で、自動・ライト・ダークを切り替えられる。自動は端末の明暗設定に合わせ、表示中に端末設定が変わった場合も追従する。画面の色はCSSの色変数にまとめ、ダーク時は `html` 要素の `data-theme="dark"` で切り替える。読み込み直後に明るい画面が一瞬表示されないよう、`index.html` で描画前に配色を決める。
 
 ## Main Layout
 
@@ -81,7 +82,7 @@ The main app is split into five bottom tabs:
 - Profit analysis: the profit chart views.
 - Store information: store list, store detail, rate settings, and saved-ball management.
 - Machine information: machines played, grouped by machine name.
-- Other: CSV import, CSV export, bulk editing, and update information.
+- Other: cloud storage, CSV import, CSV export, bulk editing, color scheme setting, and update information.
 
 ## Saved Fields
 

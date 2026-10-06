@@ -98,6 +98,7 @@ type CalendarAmountMode = "profit" | "expected";
 type StoreTab = "favorite" | "registered" | "custom" | "saved";
 type MachineSortKey = "name" | "count" | "lastDate" | "profit" | "expectedValue";
 type SortDirection = "asc" | "desc";
+type ThemePreference = "system" | "light" | "dark";
 
 type ChartPoint = {
   key: string;
@@ -165,6 +166,13 @@ const storageKey = "shushi-play-records";
 const rateOptionKey = "shushi-store-rate-options";
 const favoriteStoreKey = "shushi-favorite-stores";
 const favoriteMachineKey = "shushi-favorite-machines";
+const themeKey = "shushi-theme";
+const darkSchemeQuery = "(prefers-color-scheme: dark)";
+const themeOptions: { key: ThemePreference; label: string }[] = [
+  { key: "system", label: "自動" },
+  { key: "light", label: "ライト" },
+  { key: "dark", label: "ダーク" },
+];
 const machineNameAliases = new Map([
   ["ファンキージャグラー2KT", "ファンキージャグラー2"],
   ["ファンキージャグラー２ＫＴ", "ファンキージャグラー2"],
@@ -178,6 +186,11 @@ const cloudApiBaseUrl = (
 ).replace(/\/+$/u, "");
 
 const updateItems = [
+  {
+    date: "2026-10-07",
+    title: "ダークモードを追加",
+    body: "その他タブの「画面の配色」で、自動・ライト・ダークを選べるようにしました。自動では端末の設定に合わせて明るい画面と暗い画面が切り替わります。設定は端末ごとに保存されます。",
+  },
   {
     date: "2026-10-01",
     title: "カレンダー上部に稼働日数を追加",
@@ -630,6 +643,36 @@ function loadStringList(key: string): string[] {
 function saveStringList(key: string, values: string[]) {
   const nextValues = key === favoriteMachineKey ? normalizeMachineList(values) : normalizeStringList(values);
   window.localStorage.setItem(key, JSON.stringify(nextValues));
+}
+
+function loadThemePreference(): ThemePreference {
+  try {
+    const value = window.localStorage.getItem(themeKey);
+    return value === "light" || value === "dark" ? value : "system";
+  } catch {
+    return "system";
+  }
+}
+
+function saveThemePreference(preference: ThemePreference) {
+  try {
+    if (preference === "system") {
+      window.localStorage.removeItem(themeKey);
+    } else {
+      window.localStorage.setItem(themeKey, preference);
+    }
+  } catch {
+    // 保存できない環境でも、表示中の配色はそのまま使う
+  }
+}
+
+function applyTheme(preference: ThemePreference) {
+  const isDark =
+    preference === "dark" || (preference === "system" && window.matchMedia(darkSchemeQuery).matches);
+  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", isDark ? "#0e1412" : "#eef2f1");
 }
 
 function normalizeStringList(values: unknown): string[] {
@@ -1497,8 +1540,23 @@ export function App() {
   const [isCloudBusy, setIsCloudBusy] = useState(false);
   const [cloudMessage, setCloudMessage] = useState("クラウドへ接続しています。");
   const [lastCloudSavedAt, setLastCloudSavedAt] = useState("");
+  const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference);
 
   const days = useMemo(() => monthDays(currentMonth), [currentMonth]);
+
+  useEffect(() => {
+    applyTheme(themePreference);
+    saveThemePreference(themePreference);
+
+    if (themePreference !== "system") {
+      return;
+    }
+
+    const query = window.matchMedia(darkSchemeQuery);
+    const followSystem = () => applyTheme("system");
+    query.addEventListener("change", followSystem);
+    return () => query.removeEventListener("change", followSystem);
+  }, [themePreference]);
 
   function currentAppState(): AppState {
     return normalizeAppState({
@@ -3903,6 +3961,27 @@ export function App() {
             onChange={importRecordsFromCsv}
           />
           {csvMessage && <p>{csvMessage}</p>}
+
+          <div className="cloud-panel theme-panel">
+            <div>
+              <p className="eyebrow">表示</p>
+              <h2>画面の配色</h2>
+              <p>自動は端末の設定に合わせて切り替わります。</p>
+            </div>
+            <div className="rate-kind-switch theme-switch" role="group" aria-label="画面の配色">
+              {themeOptions.map((option) => (
+                <button
+                  aria-pressed={themePreference === option.key}
+                  className={`rate-kind-button ${themePreference === option.key ? "is-active" : ""}`}
+                  key={option.key}
+                  type="button"
+                  onClick={() => setThemePreference(option.key)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
         )}
 

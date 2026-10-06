@@ -3,6 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#eef2f1" />
+    <script>
+      // 画面が一瞬明るく表示されないよう、描画前に配色を決める
+      (function () {
+        var theme = "system";
+        try {
+          theme = localStorage.getItem("shushi-theme") || "system";
+        } catch (error) {}
+        var isDark =
+          theme === "dark" ||
+          (theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = isDark ? "dark" : "light";
+      })();
+    </script>
     <title>shushi</title>
   </head>
   <body>
