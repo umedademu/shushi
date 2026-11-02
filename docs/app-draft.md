@@ -74,6 +74,19 @@ Implemented draft behavior:
 - Normalize spacing and full-width number variants of Smart Slot Fist of the North Star Tensei Chapter 2 so saved records are grouped as one machine.
 - その他タブの「画面の配色」で、自動・ライト・ダークを切り替えられる。自動は端末の明暗設定に合わせ、表示中に端末設定が変わった場合も追従する。画面の色はCSSの色変数にまとめ、ダーク時は `html` 要素の `data-theme="dark"` で切り替える。読み込み直後に明るい画面が一瞬表示されないよう、`index.html` で描画前に配色を決める。
 
+## App Icon
+
+ブラウザのタブとスマホのホーム画面用のアイコンを `app/public` に置いている。元の絵は `favicon.svg`（緑の背景に、上が黄色のカレンダーと円マーク）。
+
+- `favicon.svg`: ブラウザのタブ用。角を丸めた形。
+- `favicon.ico`: SVGを表示できない古いブラウザ用。16・32・48ピクセルをまとめたもの。
+- `apple-touch-icon.png`: iPhoneのホーム画面用（180ピクセル）。iPhoneが自分で角を丸めるため、角を丸めない正方形で、透明部分もない。
+- `icon-192.png` / `icon-512.png`: Androidなど向けの通常アイコン。角を丸めた形。
+- `icon-maskable-512.png`: Androidが円などの形に切り抜く用。角を丸めない正方形で、絵は中央の安全な範囲に収めている。
+- `manifest.webmanifest`: アイコンとアプリ名をまとめた設定。ホーム画面から開いたときの動きは今までどおりブラウザで開く（`display: "browser"`）。
+
+PNGとICOは `favicon.svg` から作っている。角を丸めないものは `rx="112"` を外した絵から作る。
+
 ## Main Layout
 
 The main app is split into five bottom tabs:
